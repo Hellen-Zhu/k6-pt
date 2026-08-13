@@ -1,0 +1,34 @@
+{
+  "__truncated": "截图在 data.trade.basic.marketers 处截断，notionalAmount 之后（按字母序）的字段缺失。",
+  "code": 200,
+  "status": "PENDING APPROVAL",
+  "msg": "Submitted for checker approval. TaskId: CHK-17865078801556298D6B6",
+  "data": {
+    "checkerContext": {
+      "taskId": "CHK-17865078801556298D6B6",
+      "submittedBy": "maker01@example.com, checker1@example.com",
+      "eventType": "SUBMIT"
+    },
+    "trade": {
+      "id": "TRD-1786507880144423CE167",
+      "basic": {
+        "ci": 0,
+        "counterpartyFmId": "10000001",
+        "counterpartyName": "PERF CP A",
+        "currencyPair": "USDJPY",
+        "cva": 0,
+        "dealDate": "2026-08-12",
+        "direction": "Sell",
+        "eventStatus": "New",
+        "fva": 0,
+        "hardMargin": 0,
+        "marketers": [
+          {
+            "marketerId": "system",
+            "revenueShare": 100
+          }
+        ]
+      }
+    }
+  }
+}

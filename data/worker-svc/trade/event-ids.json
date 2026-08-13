@@ -1,0 +1,6 @@
+{
+  "_comment": "LIVE trade ids consumed by the trigger-event flow (one id per event — terminal or state-changing either way, so ids are spent exactly once). Produce with: ./prep.sh seed-event-pool <env> ITERATIONS=<n> (auto-activated on harvest, same pipeline as update-ids). Separate file from update-ids because the exactly-once cursor allows ONE consuming scenario per pool. Single-use: re-seed after every measurement round.",
+  "ids": [
+    "TBC-RUN-SEED-PIPELINE-FIRST"
+  ]
+}

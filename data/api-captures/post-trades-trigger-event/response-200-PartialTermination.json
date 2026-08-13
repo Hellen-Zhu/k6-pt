@@ -1,0 +1,15 @@
+{
+  "code": 200,
+  "status": "SUCCESS",
+  "msg": "",
+  "data": {
+    "eventType": "PartialTermination",
+    "results": [
+      {
+        "tradeId": "TRD-17865100233111BDEB5ED"
+      }
+    ],
+    "status": "ALL_EXECUTED",
+    "totalRequested": 1
+  }
+}

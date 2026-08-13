@@ -1,0 +1,16 @@
+{
+  "code": 200,
+  "status": "SUCCESS",
+  "msg": "",
+  "data": {
+    "eventType": "Cancellation",
+    "results": [
+      {
+        "checkerTaskId": "CHK-1786511514205E6FD778B",
+        "tradeId": "TRD-17865096147291774DD2F"
+      }
+    ],
+    "status": "ALL_PENDING_APPROVAL",
+    "totalRequested": 1
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "code": 200,
+  "status": "SUCCESS",
+  "msg": "",
+  "data": {
+    "eventType": "EarlyTermination",
+    "results": [
+      {
+        "tradeId": "TRD-178650898507876A051AF"
+      }
+    ],
+    "status": "ALL_EXECUTED",
+    "totalRequested": 1
+  }
+}

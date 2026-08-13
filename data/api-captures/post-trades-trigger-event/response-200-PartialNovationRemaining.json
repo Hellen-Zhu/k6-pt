@@ -1,0 +1,18 @@
+{
+  "code": 200,
+  "status": "SUCCESS",
+  "msg": "",
+  "data": {
+    "eventType": "PartialNovationRemaining",
+    "results": [
+      {
+        "childTradeIds": [
+          "TRD-1786458572651F202AB59-PNOV-8F06AF3A"
+        ],
+        "tradeId": "TRD-1786458572651F202AB59"
+      }
+    ],
+    "status": "ALL_EXECUTED",
+    "totalRequested": 1
+  }
+}

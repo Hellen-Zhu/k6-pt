@@ -1,0 +1,9 @@
+{
+  "basic": {
+    "portfolioId": "PERF-PF-A",
+    "counterpartyFmId": "10000001",
+    "counterpartyName": "PERF CP A",
+    "productId": "FX_TRF",
+    "direction": "Sell"
+  }
+}

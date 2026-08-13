@@ -1,0 +1,47 @@
+{
+  "__truncated": "data.basic 已完整（IMG_3961 + IMG_3965 两张衔接）。仅 data.instrument.TRF 在开头处截断。",
+  "code": 200,
+  "status": "SUCCESS",
+  "msg": "",
+  "data": {
+    "id": "TRD-1786507880144423CE167",
+    "basic": {
+      "ci": 0,
+      "counterpartyFmId": "10000001",
+      "counterpartyName": "PERF CP A",
+      "currencyPair": "USDJPY",
+      "cva": 0,
+      "dealDate": "2026-08-12",
+      "direction": "Sell",
+      "eventStatus": "New",
+      "fva": 0,
+      "hardMargin": 0,
+      "marketers": [
+        {
+          "marketerId": "system",
+          "revenueShare": 100
+        }
+      ],
+      "notionalAmount": 70000,
+      "notionalCurrency": "USD",
+      "portfolioId": "PERF-PF-A",
+      "premiumAmount": 0,
+      "premiumCurrency": "USD",
+      "premiumDate": "2026-08-14",
+      "productId": "FX_TRF",
+      "rate": 146.2,
+      "bookingEntity": "LONDON",
+      "source": "UPSTREAM_A",
+      "status": "Live",
+      "structuringInvolved": false,
+      "tradeType": "FX_TRF",
+      "trader": "system",
+      "valueDate": "2029-04-20",
+      "version": 2,
+      "vmc": 0
+    },
+    "instrument": {
+      "TRF": {}
+    }
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "_comment": [
+    "Lifecycle event templates (reusable rotation pool). Envelope captured from real DevTools payloads 2026-08-10:",
+    "{ eventType, data: [ {key, value, type: Text|Numeric|Date} ], reason, comments: '', tradeIds: [id] } —",
+    "comments and tradeIds are added by the client (trigger-event.js), rows carry only eventType/data/reason.",
+    "All 5 captured event types are represented below. VALUES are placeholders (repo red line: real portfolio/",
+    "counterparty values live only in the private copy); the SHAPES (keys, types, reason enums) are verbatim.",
+    "Date-typed values use {{TODAY}} / {{T_PLUS_2}} tokens, resolved at request time (T+2 = business days,",
+    "weekends skipped) so rows never go stale. The target tradeId comes from the event-ids CONSUMABLE pool,",
+    "never from these rows."
+  ],
+  "rows": [
+    {
+      "eventType": "PortfolioReassignment",
+      "data": [ { "key": "newPortfolio", "value": "PERF-PF-B", "type": "Text" } ],
+      "reason": "NON_ECON_CHANGE",
+      "note": "Shape captured 2026-08-10; newPortfolio placeholder — must be a real portfolio the maker owns"
+    },
+    {
+      "eventType": "PartialTermination",
+      "data": [ { "key": "newNotional", "value": 1000, "type": "Numeric" } ],
+      "reason": "ECON_CHANGE",
+      "note": "Shape captured 2026-08-10; newNotional must be below the trade's current notional"
+    },
+    {
+      "eventType": "Cancellation",
+      "data": [],
+      "reason": "ECON_CHANGE",
+      "note": "Shape captured 2026-08-10; terminal event, empty data by contract"
+    },
+    {
+      "eventType": "EarlyTermination",
+      "data": [
+        { "key": "direction", "value": "Pay", "type": "Text" },
+        { "key": "amount", "value": 1000, "type": "Numeric" },
+        { "key": "ccy", "value": "USD", "type": "Text" },
+        { "key": "settleDate", "value": "{{T_PLUS_2}}", "type": "Date" },
+        { "key": "ci", "value": "{}", "type": "Text" }
+      ],
+      "reason": "FULL_TERM",
+      "note": "Shape captured 2026-08-10; ci sent as the literal string '{}' per capture"
+    },
+    {
+      "eventType": "NovationRemaining",
+      "data": [
+        { "key": "newCptyName", "value": "PERF CP B", "type": "Text" },
+        { "key": "newCptyFmId", "value": "10000002", "type": "Text" },
+        { "key": "novationDate", "value": "{{TODAY}}", "type": "Date" },
+        { "key": "newTargetAmount", "value": 1000, "type": "Numeric" }
+      ],
+      "reason": "REMAINING_PARTY_FULL",
+      "note": "Shape captured 2026-08-10; counterparty placeholders — private copy uses real captured values"
+    }
+  ]
+}

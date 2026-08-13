@@ -1,0 +1,49 @@
+{
+  "_comment": [
+    "create case pool: one row = one complete runnable case (productId + ownership fields embedded in the same row).",
+    "Discipline: every row must be same-source captured from a single real curl (create the order in the system's web UI + DevTools Copy as cURL);",
+    "assembling fields across rows/files is forbidden — a hand-built combination may be an ownership relationship that does not exist in reality (see README.md in this directory).",
+    "The dat file is located by the same-name convention: data/datfiles/products/<productId>/<productId>.dat; rows do not carry paths.",
+    "Row SHAPE recalibrated against a real environment capture (2026-08-10): basic gained direction/premiumAmount/premiumCurrency/iaCcy/",
+    "structuringInvolved/esgLinked/excludeFromCsa/breakClause. productId is the single product identifier (payload key, row field,",
+    "dat same-name convention — the former productType name was retired 2026-08-10). premiumDate is NOT a row field —",
+    "it is computed dynamically as T+2 business days at request time (an explicit premiumDate in a row overrides, for controlled experiments).",
+    "notionalCurrency may legitimately be an empty string (server infers); counterpartyFmId is an 8-digit-style numeric string;",
+    "portfolioId may differ per row. VALUES below remain placeholder fakes (well-formed, pass preflight) — real captured values live only",
+    "in the private copy and are never committed; record capture time and source in note."
+  ],
+  "rows": [
+    {
+      "productId": "FX_TRF",
+      "direction": "Buy",
+      "notionalCurrency": "",
+      "premiumAmount": 0,
+      "premiumCurrency": "USD",
+      "iaCcy": "USD",
+      "structuringInvolved": false,
+      "esgLinked": false,
+      "excludeFromCsa": false,
+      "breakClause": false,
+      "portfolioId": "PERF-PF-A",
+      "counterpartyFmId": "10000001",
+      "counterpartyName": "PERF CP A",
+      "note": "Shape-calibrated placeholder (2026-08-10 capture), not a real capture"
+    },
+    {
+      "productId": "FX_TRF",
+      "direction": "Buy",
+      "notionalCurrency": "",
+      "premiumAmount": 0,
+      "premiumCurrency": "USD",
+      "iaCcy": "USD",
+      "structuringInvolved": false,
+      "esgLinked": false,
+      "excludeFromCsa": false,
+      "breakClause": false,
+      "portfolioId": "PERF-PF-B",
+      "counterpartyFmId": "10000002",
+      "counterpartyName": "PERF CP B",
+      "note": "Shape-calibrated placeholder (2026-08-10 capture), not a real capture"
+    }
+  ]
+}

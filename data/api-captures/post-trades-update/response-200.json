@@ -1,0 +1,53 @@
+{
+  "__truncated": "data.basic 完整；data.instrument.TRF 在 delivery 处截断，其余字段（notionals 等）缺失。",
+  "code": 200,
+  "status": "PENDING APPROVAL",
+  "msg": "Submitted for checker approval. TaskId: CHK-1786507001735B9DC5A80",
+  "data": {
+    "id": "TRD-178645853025698777B95",
+    "basic": {
+      "ci": 0,
+      "counterpartyFmId": "10000001",
+      "counterpartyName": "PERF CP A",
+      "currencyPair": "USDJPY",
+      "cva": 0,
+      "dealDate": "2026-08-11",
+      "direction": "Buy",
+      "eventStatus": "Amended",
+      "fva": 0,
+      "hardMargin": 0,
+      "marketers": [
+        {
+          "marketerId": "system",
+          "revenueShare": 100
+        }
+      ],
+      "notionalAmount": 70000,
+      "notionalCurrency": "USD",
+      "portfolioId": "PERF-PF-A",
+      "premiumAmount": 0,
+      "premiumCurrency": "USD",
+      "premiumDate": "2026-08-13",
+      "productId": "FX_TRF",
+      "rate": 146.2,
+      "bookingEntity": "LONDON",
+      "source": "UPSTREAM_A",
+      "status": "Pending Approval Live",
+      "structuringInvolved": false,
+      "tradeType": "FX_TRF",
+      "trader": "system",
+      "valueDate": "2029-04-20",
+      "version": 3,
+      "vmc": 0
+    },
+    "instrument": {
+      "TRF": {
+        "delivery": {
+          "DD_Physical": {
+            "dd_roundings": null
+          }
+        }
+      }
+    }
+  }
+}

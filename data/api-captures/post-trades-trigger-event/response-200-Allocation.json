@@ -1,0 +1,19 @@
+{
+  "code": 200,
+  "status": "SUCCESS",
+  "msg": "",
+  "data": {
+    "eventType": "Allocation",
+    "results": [
+      {
+        "childTradeIds": [
+          "TRD-178645705929093426094-ALLOC-1",
+          "TRD-178645705929093426094-ALLOC-2"
+        ],
+        "tradeId": "TRD-178645705929093426094"
+      }
+    ],
+    "status": "ALL_EXECUTED",
+    "totalRequested": 1
+  }
+}

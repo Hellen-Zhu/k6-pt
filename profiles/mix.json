@@ -1,0 +1,27 @@
+{
+  "name": "mix",
+  "description": "Mixed-API workload: ONE total arrival rate, split across flows by the ratio table in the chosen src/mixed/ entry (trade-mix-book / -amend / -full; placeholder ratios pending the production traffic profile). Open model. RATE= overrides the TOTAL rate (for trade-mix-full: total HTTP req/s exactly), DURATION= the window.",
+  "_pools": "trade-mix-full is CHAIN-FED: zero consumable pools; its only seeded pool is the permanent amend-cycle-ids (floor = max(50, peak amend rate x 3.5s x 3), preflight-enforced, seeded ONCE - reject restores every id). Book/amend still consume per-round pools: demand per pool = round(ratio x total rate) x duration x 1.2 (preflight-enforced; the per-scenario rate is an INTEGER, so rounding can raise demand above the plain ratio formula). Default 10 req/s x 10m - trade-mix-book (approve .2): approve 2/s -> ~1440 (seed ITERATIONS ~1800); trade-mix-amend (update .2 / approve .3): update 2/s -> ~1440, approve 3/s -> ~2160 (~1800/2700). Size trial runs down with RATE=4 DURATION=1m.",
+  "_override": "Command-line overrides apply to the scalar keys of this single template scenario BEFORE the per-endpoint split, so RATE= scales the whole mix proportionally.",
+  "scenario": {
+    "executor": "constant-arrival-rate",
+    "rate": 10,
+    "timeUnit": "1s",
+    "duration": "10m",
+    "preAllocatedVUs": 30,
+    "maxVUs": 100
+  },
+  "thresholds": {
+    "_circuitBreaker": "Two-tier lines, same rationale as load.json: strict line is the verdict, lenient line + abortOnFail is the shared-environment breaker.",
+    "perf_business_success": [
+      {
+        "threshold": "rate>0.99"
+      },
+      {
+        "threshold": "rate>0.50",
+        "abortOnFail": true,
+        "delayAbortEval": "3m"
+      }
+    ]
+  }
+}

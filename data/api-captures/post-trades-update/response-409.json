@@ -1,0 +1,5 @@
+{
+  "code": 409,
+  "status": "ERROR",
+  "msg": "Action 'AMEND' is not permitted when trade status is 'Pending Approval Live'"
+}

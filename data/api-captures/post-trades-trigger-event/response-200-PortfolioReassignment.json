@@ -1,0 +1,15 @@
+{
+  "code": 200,
+  "status": "SUCCESS",
+  "msg": "",
+  "data": {
+    "eventType": "PortfolioReassignment",
+    "results": [
+      {
+        "tradeId": "TRD-1786509861124045FF465"
+      }
+    ],
+    "status": "ALL_EXECUTED",
+    "totalRequested": 1
+  }
+}

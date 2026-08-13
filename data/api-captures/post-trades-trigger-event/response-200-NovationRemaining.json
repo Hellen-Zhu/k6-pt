@@ -1,0 +1,18 @@
+{
+  "code": 200,
+  "status": "SUCCESS",
+  "msg": "",
+  "data": {
+    "eventType": "NovationRemaining",
+    "results": [
+      {
+        "childTradeIds": [
+          "TRD-17864983007783EC7D4A1-NOV-C02C8951"
+        ],
+        "tradeId": "TRD-17864983007783EC7D4A1"
+      }
+    ],
+    "status": "ALL_EXECUTED",
+    "totalRequested": 1
+  }
+}

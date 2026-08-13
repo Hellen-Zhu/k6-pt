@@ -1,0 +1,66 @@
+{
+  "_comment": [
+    "calculate-risk payload pool (reusable rotation). One row = one FULL trade snapshot exactly as the UI",
+    "sends it: { id, basic: {...}, instrument: {...}, trace: [...] } (captured 2026-08-10). STRICT same-source",
+    "discipline: capture rows verbatim from DevTools (trigger any lifecycle event in the UI → Network →",
+    "calculate-risk → copy payload as JSON) — never assemble instrument sections by hand; the pricing engine",
+    "would reject or short-circuit and the round measures the error path. The row below is a well-formed",
+    "STRUCTURAL placeholder (passes preflight, will be business-rejected by a real server); real captures live",
+    "only in the private copy. Pool size buys pricing-path diversity (different products/schedules), not",
+    "sufficiency — the pool rotates. trace may be [] if trimmed from the capture; the client sends it as-is."
+  ],
+  "rows": [
+    {
+      "id": "TRD-PLACEHOLDER0000000001",
+      "basic": {
+        "breakClause": "false",
+        "ci": 0,
+        "counterpartyFmId": "10000001",
+        "counterpartyName": "PERF CP A",
+        "currencyPair": "USDJPY",
+        "cva": 0,
+        "dealDate": "2026-08-10",
+        "direction": "Buy",
+        "esgLinked": false,
+        "eventStatus": "New",
+        "excludeFromCsa": false,
+        "fva": 0,
+        "hardMargin": 0,
+        "iaCcy": "USD",
+        "marketers": [ { "marketerId": "system", "revenueShare": 100 } ],
+        "notionalAmount": 70000,
+        "notionalCurrency": "USD",
+        "portfolioId": "PERF-PF-A",
+        "premiumAmount": 0,
+        "premiumCurrency": "USD",
+        "premiumDate": "2026-08-12",
+        "productId": "FX_TRF",
+        "rate": 146.2,
+        "bookingEntity": "LONDON",
+        "source": "PLACEHOLDER",
+        "status": "Live",
+        "structuringInvolved": false,
+        "tradeType": "FX_TRF",
+        "trader": "system",
+        "valueDate": "2029-04-20",
+        "version": 2,
+        "vmc": 0
+      },
+      "instrument": {
+        "TRF": {
+          "delivery": { "DD_Physical": { "dd_roundings": null } },
+          "notionals": [ 70000, 70000 ],
+          "payoffDict": { "1": { "PD_BrokenLine": { "pdbrokenLine": [] } } },
+          "payoffs": [ "1", "1" ],
+          "schedule": { "SD_JustResetAndPayDates": { "resetDates": [ "2026-10-16", "2027-01-18" ], "paymentDates": [ "2026-10-20", "2027-01-20" ] } },
+          "targetCGain": { "TD_BigFigure": { "td_bf": 500, "td_ty": "Full", "td_firstPeriod": 0 } },
+          "underlyings": { "ASSET": { "Index": { "indexName": "USDJPY", "assetClass": "FX", "fixingQualifier": "PLACEHOLDER" } } },
+          "tradeType": "Cortex.Finance.Tradeable.TRF",
+          "version": "V1"
+        }
+      },
+      "trace": [],
+      "note": "Structural placeholder modeled on the 2026-08-10 capture — NOT a real capture; replace in the private copy"
+    }
+  ]
+}

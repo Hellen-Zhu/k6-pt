@@ -1,0 +1,8 @@
+{
+  "_comment": "PERMANENT cycle pool for trade-mix-full's amend chain (update -> reject; reject discards the amendment so every id returns to LIVE unchanged - zero drift, seed ONCE and reuse across rounds). Producer: ./prep.sh seed-amend-cycle-pool <env> ITERATIONS=<n> (create->approve pipeline, auto-activated by seed-harvest.sh), or let ./prep.sh trade-mix-full <env> <profile> size and seed it. Repo copy holds placeholders only; real LIVE ids exist only in the private copy. If ids turn poisoned (stuck Pending Approval Live after a failed reject - shows as http-409), just re-seed.",
+  "ids": [
+    "TBC-CYCLE-TRADE-ID-1",
+    "TBC-CYCLE-TRADE-ID-2",
+    "TBC-CYCLE-TRADE-ID-3"
+  ]
+}

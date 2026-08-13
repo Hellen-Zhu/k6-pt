@@ -1,0 +1,35 @@
+{
+  "__truncated": "截图只拍到 data.data 的第 1 个元素完整 + 第 2 个元素的 checkerContext.taskId。data.data 之外是否有分页字段未知。",
+  "code": 200,
+  "status": "SUCCESS",
+  "msg": "",
+  "data": {
+    "data": [
+      {
+        "trade": {
+          "id": "TRD-17864983007783EC7D4A1",
+          "basic": {
+            "currencyPair": "USDCNH",
+            "dealDate": "2026-08-12",
+            "eventStatus": "New",
+            "notionalAmount": 200000000,
+            "notionalCurrency": "USD",
+            "productId": "FX_FSB",
+            "rate": 0,
+            "source": "UPSTREAM_A",
+            "status": "Live",
+            "tradeType": "FX_FSB",
+            "valueDate": "2026-08-12",
+            "version": 0
+          }
+        }
+      },
+      {
+        "__truncated": "本元素仅 checkerContext.taskId 可见",
+        "checkerContext": {
+          "taskId": "CHK-17865068784803F04F18E"
+        }
+      }
+    ]
+  }
+}

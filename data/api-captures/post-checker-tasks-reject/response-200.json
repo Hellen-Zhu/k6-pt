@@ -1,0 +1,32 @@
+{
+  "__truncated": "IMG_3962 拍到 premiumAmount 处截断。其后字段中 basic.status 的取值 'Draft' 由 QA 确认后补入（非截图所得），premiumCurrency 等其余字段仍缺失。",
+  "code": 200,
+  "status": "SUCCESS",
+  "msg": "",
+  "data": {
+    "id": "TRD-1786510336268E4FFA35D",
+    "basic": {
+      "ci": 0,
+      "counterpartyFmId": "10000001",
+      "counterpartyName": "PERF CP A",
+      "currencyPair": "USDJPY",
+      "cva": 0,
+      "dealDate": "2026-08-12",
+      "direction": "Sell",
+      "eventStatus": "New",
+      "fva": 0,
+      "hardMargin": 0,
+      "marketers": [
+        {
+          "marketerId": "system",
+          "revenueShare": 100
+        }
+      ],
+      "notionalAmount": 70000,
+      "notionalCurrency": "USD",
+      "portfolioId": "PERF-PF-A",
+      "premiumAmount": 0,
+      "status": "Draft"
+    }
+  }
+}
