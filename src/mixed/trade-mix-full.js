@@ -4,20 +4,24 @@
  * entry runs with ZERO consumable pools (prep per round is retired for this entry).
  *
  *   flow          share  req/iter  iteration body (strictly serial inside — business causality)
- *   query          .20      1      GET /trades
+ *   query          .25      1      GET /trades
  *   detail         .10      1      GET /trades/{id}            (trade-ids reusable read pool)
  *   create-chain   .10      2      create → approve            (fresh trade, then abandoned LIVE)
- *   event-chain    .20      4      create → approve → trigger-event → calculate-risk
+ *   event-chain    .15      3      create → approve → trigger-event
  *                                  (fresh DISPOSABLE trade, so terminal event types are fine;
- *                                   5 captured types rotate; calc fires 1:1 after the event)
+ *                                   5 captured types rotate)
  *   amend-cycle    .40      2      update → reject             (PERMANENT pool: reject discards
  *                                   the amendment, the id returns to LIVE unchanged — seed once)
  *
  * RATE semantics (2026-08-12 decision): ratio = share of HTTP REQUESTS, so RATE=10 puts
- * exactly 10 HTTP req/s on the gateway. Per-endpoint at RATE=10: query 2 / detail 1 /
- * create 1 / approve 1 / update 2 / reject 2 / event 0.5 / calc 0.5. Chains run at
+ * exactly 10 HTTP req/s on the gateway. Per-endpoint at RATE=10: query 2.5 / detail 1 /
+ * create 1 / approve 1 / update 2 / reject 2 / event 0.5. Chains run at
  * rate × share ÷ reqPerIter iterations/s (lib/mix.js emits ×10 rates with timeUnit 10s to
  * express the fractional ones).
+ *
+ * calc-risk removed from the mix (2026-08-14 decision: the mix does not cover calc-risk /
+ * risk-metrics for now; both stay available as single-API calibration scenarios). The calc
+ * leg's former .05 request share went to query — every write-path arrival rate is unchanged.
  *
  * Ratio provenance — the business population picture (2026-08-12): of the active users,
  * create : amend : event ≈ 20 : 40 : 10 (amend-dominant per management). Checker load is NOT
@@ -51,7 +55,6 @@ import { pickCase } from '../testdata/trade/create.js';
 import { pickTradeId, tradeIdsPreflight } from '../pools/trade/trade-ids-pool.js';
 import { createTradePreflight } from '../testdata/trade/create-preflight.js';
 import { pickEventCase, eventCasesPreflight } from '../testdata/trade/trigger-event.js';
-import { pickCalcRiskPayload, calcRiskPayloadsPreflight } from '../testdata/trade/calc-risk.js';
 import { loadCyclePool, cyclePreflight, pickCycleId } from '../pools/trade/cycle-pool.js';
 import { createTrade } from '../api/trade/create.js';
 import { updateTrade } from '../api/trade/update.js';
@@ -59,11 +62,10 @@ import { approveTask, rejectTask } from '../api/checker-flow/tasks.js';
 import { queryTrades } from '../api/trade/query.js';
 import { getTrade } from '../api/trade/detail.js';
 import { triggerEvent } from '../api/trade/trigger-event.js';
-import { calculateRisk } from '../api/trade/calc-risk.js';
 
 // Request shares (sum 1.0). create:amend:event = 2:4:1 is the business picture; the
 // chain shapes (reqPerIter) are structural, not tunable — see header.
-const MIX = { query: 0.2, detail: 0.1, createChain: 0.1, eventChain: 0.2, amendCycle: 0.4 };
+const MIX = { query: 0.25, detail: 0.1, createChain: 0.1, eventChain: 0.15, amendCycle: 0.4 };
 
 const QUERY_DATA = loadData('trade/trades-query');
 const UPDATE_DATA = loadData('trade/update-payload');
@@ -79,7 +81,6 @@ const base = buildOptionsMulti(
     ['trade', 'update'],
     ['checker-flow', 'reject'],
     ['trade', 'triggerEvent'],
-    ['trade', 'calcRisk'],
   ],
   // Same empty-DB guard as the single-API query scenario
   { perf_trades_rows: ['avg>0'] },
@@ -89,7 +90,7 @@ base.scenarios = splitByRatio(base.scenarios.main, [
   { name: 'query-mix', exec: 'queryMix', ratio: MIX.query },
   { name: 'detail-mix', exec: 'detailMix', ratio: MIX.detail },
   { name: 'create-chain', exec: 'createChain', ratio: MIX.createChain, reqPerIter: 2 },
-  { name: 'event-chain', exec: 'eventChain', ratio: MIX.eventChain, reqPerIter: 4 },
+  { name: 'event-chain', exec: 'eventChain', ratio: MIX.eventChain, reqPerIter: 3 },
   { name: 'amend-cycle', exec: 'amendCycle', ratio: MIX.amendCycle, reqPerIter: 2 },
 ]);
 export const options = base;
@@ -135,7 +136,6 @@ export function setup() {
   const seeded = createTradePreflight();
   tradeIdsPreflight();
   eventCasesPreflight();
-  calcRiskPayloadsPreflight();
   cyclePreflight(CYCLE_POOL, CYCLE_NEEDED, 'amend-cycle-ids');
   return seeded;
 }
@@ -158,10 +158,9 @@ export function createChain() {
   approveTask(cfg, created.taskId, pickUser(cfg, 'checker', __VU), 'main');
 }
 
-/** create → approve → trigger-event → calculate-risk. The trade is DISPOSABLE, which is what
- *  lets every captured event type fire here, terminal ones included. The event template
- *  rotates on the iteration cursor; calc is the structural 1:1 follow-up (skipped when the
- *  event itself was blocked — the UI would not recalc a failed event either). */
+/** create → approve → trigger-event. The trade is DISPOSABLE, which is what lets every
+ *  captured event type fire here, terminal ones included. The event template rotates on
+ *  the iteration cursor. */
 export function eventChain() {
   const i = exec.scenario.iterationInTest;
   const maker = pickUser(cfg, 'maker', __VU);
@@ -169,9 +168,7 @@ export function eventChain() {
   if (created.errClass !== ERR.OK || !created.taskId) return;
   const approved = approveTask(cfg, created.taskId, pickUser(cfg, 'checker', __VU), 'main');
   if (approved.errClass !== ERR.OK) return;
-  const evented = triggerEvent(cfg, created.tradeId, pickEventCase(i), maker, 'main');
-  if (evented.errClass !== ERR.OK) return;
-  calculateRisk(cfg, pickCalcRiskPayload(i), maker, 'main');
+  triggerEvent(cfg, created.tradeId, pickEventCase(i), maker, 'main');
 }
 
 /** update → reject on the permanent pool. reject discards the amendment, so the id is LIVE
