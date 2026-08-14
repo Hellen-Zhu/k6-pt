@@ -823,7 +823,8 @@
         "orientation": "horizontal",
         "displayMode": "basic",
         "showUnfilled": true,
-        "valueMode": "color"
+        "valueMode": "color",
+        "namePlacement": "top"
       },
       "fieldConfig": {
         "defaults": {

@@ -287,7 +287,11 @@ if [[ -n "$GRAFANA_URL" ]]; then
   sep='?'; [[ "$GRAFANA_URL" == *\?* ]] && sep='&'
   START_MS=$(grep -oE 'epochMillis: *[0-9]+' "$MANIFEST" | head -1 | grep -oE '[0-9]+')
   END_MS=$(grep -oE 'endEpochMillis: *[0-9]+' "$MANIFEST" | grep -oE '[0-9]+')
-  echo "Grafana:   ${GRAFANA_URL}${sep}from=${START_MS}&to=${END_MS}&var-testid=${RUN_ID}"
+  GRAFANA_LINK="${GRAFANA_URL}${sep}from=${START_MS}&to=${END_MS}&var-testid=${RUN_ID}"
+  echo "Grafana:   $GRAFANA_LINK"
+  # Persist the ready-to-click frozen-window link with the run's artifacts — terminal
+  # scrollback is gone in a week, the manifest is what gets consulted later.
+  echo "grafanaLink:  $GRAFANA_LINK" >> "$MANIFEST"
 else
   echo "Grafana time range (replace from=now-1h&to=now in the URL):"
   grep -E 'epochMillis' "$MANIFEST" | sed 's/^/  /'
