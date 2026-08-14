@@ -187,6 +187,16 @@ if [[ -n "$PROM_URL" ]]; then
   echo ""
 fi
 
+# Live-watch link, printed BEFORE the run: rolling now-window + auto-refresh — the post-run
+# link below stays a FROZEN from/to window on purpose (post-mortem; refresh is meaningless
+# there). 10s refresh matches the RW push cadence (k6 pushes batches every 5s by default);
+# only useful when metrics actually flow, hence gated on PROM_URL too.
+if [[ -n "$GRAFANA_URL" && -n "$PROM_URL" ]]; then
+  sep='?'; [[ "$GRAFANA_URL" == *\?* ]] && sep='&'
+  echo "▶ grafana   ${GRAFANA_URL}${sep}from=now-15m&to=now&refresh=10s&var-testid=${RUN_ID}   ← live: rolling 15m, 10s auto-refresh"
+  echo ""
+fi
+
 # ── k6 built-in web dashboard (k6 ≥ v0.49) ─────────────────
 # Watch live curves at http://127.0.0.1:5665 while running; a self-contained HTML
 # is exported on finish — until Prometheus is wired up, this is the only
