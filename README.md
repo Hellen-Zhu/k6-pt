@@ -1,6 +1,7 @@
 # k6-pt — k6 performance-testing framework
 
 Server-side load-testing framework for an FX structured-products trading API. Two top-level commands with strictly separate jobs — `./run.sh` triggers tests and reports, `./prep.sh` prepares pool data (demand math, seed producers, harvest, activation) — both run directly on Linux/macOS; Windows runs the same scripts via Git Bash.
+Architecture guide: `ARCHITECTURE.md` — directory map, the two pipelines, seed-vs-pool, name-wiring points.
 
 ## Quick start
 

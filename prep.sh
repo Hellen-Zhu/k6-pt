@@ -117,15 +117,17 @@ while read -r pool planned; do
   printf '  %-16s planned %-7s floor %-7s seed ITERATIONS %s\n' "$pool" "$planned" "$needed" "$iter"
 done <<< "$PLANS"
 
-# Read-pool bootstrap: mixed entries also preflight trade-ids. Its refresh rides on
-# seed-update-pool; when that producer is not already in the demand list, run a small
-# bootstrap seed for the side effect alone.
+# Read-pool refresh: mixed entries also preflight trade-ids. The refresh is UNCONDITIONAL
+# (2026-08-13 decision): non-placeholder content proves nothing — ids from another
+# environment or a cleaned DB look valid here and only surface as http-404 mid-round.
+# Always seed a fresh batch; skip only when this round's demand already runs
+# seed-update-pool, whose harvest refreshes trade-ids anyway (seed-harvest.sh side effect).
 TRADE_IDS_FILE="data/worker-svc/trade/trade-ids.json"
 case "$SCENARIO" in trade-mix-*)
-  if grep -q 'TBC-' "$TRADE_IDS_FILE" 2>/dev/null && ! grep -q '^update-ids ' <<< "$PLANS"; then
-    echo "▶ prep     trade-ids read pool still holds placeholders — bootstrapping via seed-update-pool ITERATIONS=50"
+  if ! grep -q '^update-ids ' <<< "$PLANS"; then
+    echo "▶ prep     refreshing the trade-ids read pool — seeding a fresh batch via seed-update-pool ITERATIONS=50"
     seed_run seed-update-pool 50
-    grep -q 'TBC-' "$TRADE_IDS_FILE" && { echo "ERROR: trade-ids still holds placeholders after bootstrap — harvest failed (environment reachable? contract drift?); prep aborted" >&2; exit 1; }
+    grep -q 'TBC-' "$TRADE_IDS_FILE" && { echo "ERROR: trade-ids still holds placeholders after refresh — harvest failed (environment reachable? contract drift?); prep aborted" >&2; exit 1; }
   fi ;;
 esac
 
