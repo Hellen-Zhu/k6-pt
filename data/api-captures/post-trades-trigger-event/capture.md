@@ -1,6 +1,6 @@
 # POST /api/v1/trades/trigger-event
 
-- **URL**: <WORKER_SVC_BASE>/api/v1/trades/trigger-event
+- **URL**: <GATEWAY_BASE>/api/v1/trades/trigger-event
 - **Method**: POST，JSON body
 - **Status**: 200
 - **Captured**: 2026-08-12（来源：Chrome DevTools Network 截图 IMG_3963_2 / 3966–3972）
@@ -9,7 +9,7 @@
 
 ## 请求
 
-payload 已在项目中：`data/worker-svc/trade/event-cases.json`（5 种 event 的模板），信封由 `src/api/worker-svc/trade/trigger-event.js` 的 `buildEventPayload()` 组装：
+payload 已在项目中：`data/trade/event-cases.json`（5 种 event 的模板），信封由 `src/api/trade/trigger-event.js` 的 `buildEventPayload()` 组装：
 
 ```
 { eventType, data: [ {key, value, type: Text|Numeric|Date} ], reason, comments: "", tradeIds: [tradeId] }
@@ -50,7 +50,7 @@ payload 已在项目中：`data/worker-svc/trade/event-cases.json`（5 种 event
 
 ## 业务断言（压测判定口径）
 
-`src/api/worker-svc/trade/trigger-event.js`：
+`src/api/trade/trigger-event.js`：
 
 | 断言 | 分类 | 不符时的 reason |
 |---|---|---|

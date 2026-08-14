@@ -59,13 +59,13 @@ function capture(method, url, params, body, res) {
   console.log('HTTPCAP ' + b64encode(JSON.stringify(entry), 'std'));
 }
 
-function request(method, cfg, service, path, body, opts) {
+function request(method, cfg, path, body, opts) {
   if (!opts || !opts.name) throw new Error('http: opts.name tag is required');
   const entries = opts.params ? Object.entries(opts.params) : [];
   const qs = entries.length
     ? '?' + entries.map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join('&')
     : '';
-  // Single gateway endpoint for every service; `service` is attribution-only from here on
+  // Single gateway endpoint; the service dimension is fully retired (2026-08-14) — module is the attribution tag
   const url = baseUrl(cfg) + path + qs;
   const params = {
     headers: Object.assign(
@@ -74,7 +74,7 @@ function request(method, cfg, service, path, body, opts) {
       opts.headers || {},
     ),
     tags: Object.assign(
-      { name: opts.name, service, module: opts.module || 'default' },
+      { name: opts.name, module: opts.module || 'default' },
       opts.tags || {},
     ),
   };
@@ -83,27 +83,27 @@ function request(method, cfg, service, path, body, opts) {
   return { res, tags: params.tags };
 }
 
-export function get(cfg, service, path, opts) {
-  return request('GET', cfg, service, path, null, opts);
+export function get(cfg, path, opts) {
+  return request('GET', cfg, path, null, opts);
 }
 
-export function postJson(cfg, service, path, body, opts) {
+export function postJson(cfg, path, body, opts) {
   const o = Object.assign({}, opts);
   o.headers = Object.assign({ 'Content-Type': 'application/json' }, o.headers || {});
-  return request('POST', cfg, service, path, JSON.stringify(body), o);
+  return request('POST', cfg, path, JSON.stringify(body), o);
 }
 
-export function postEmpty(cfg, service, path, opts) {
+export function postEmpty(cfg, path, opts) {
   // Empty-body POST (checker task actions take no payload — calibrated curl sends -d '').
   // Content-Type still json to mirror the captured request exactly.
   const o = Object.assign({}, opts);
   o.headers = Object.assign({ 'Content-Type': 'application/json' }, o.headers || {});
-  return request('POST', cfg, service, path, '', o);
+  return request('POST', cfg, path, '', o);
 }
 
-export function postMultipart(cfg, service, path, formData, opts) {
+export function postMultipart(cfg, path, formData, opts) {
   // An object body containing http.file() is multipart-encoded by k6 automatically, boundary
   // included; never hand-write Content-Type — a hand-written value has no boundary and would
   // override the generated one, leaving the server unable to split the parts
-  return request('POST', cfg, service, path, formData, opts);
+  return request('POST', cfg, path, formData, opts);
 }

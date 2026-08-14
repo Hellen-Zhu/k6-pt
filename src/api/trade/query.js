@@ -1,7 +1,7 @@
 /*
- * Trade read-path client: independent of the create data graph (the case pool + dat preloading in -data.js).
+ * Trade read-path client: independent of the create data graph (the row loading + dat preloading in src/testdata).
  * Rationale for the split (final review #4): the contract file used to import the data file (create-only)
- * at module top level, so the trades-query scenario transitively loaded the whole create case pool and all
+ * at module top level, so the trades-query scenario transitively loaded the whole create testdata graph and all
  * dat binaries via trades.js — any broken create data dragged down the query scenario's init, and every
  * query VU pointlessly carried an extra copy of the dat memory.
  *
@@ -10,11 +10,10 @@
  * — standard envelope + a nested data.data row array. The envelope makes business rejection assertable
  * (code/status), so this client uses the full classifier, not the structure-only classifyRead.
  */
-import * as client from '../../../lib/http.js';
-import { classifyResponse, reasonFrom, ERR } from '../../../lib/errors.js';
+import * as client from '../../lib/http.js';
+import { classifyResponse, reasonFrom, ERR } from '../../lib/errors.js';
 import { Trend } from 'k6/metrics';
 
-const SVC = 'worker-svc';
 const MOD = 'trade';
 
 // Empty-DB guard: each response's row count feeds a Trend, and the scenario attaches an avg>0 threshold —
@@ -26,7 +25,7 @@ export const tradesRows = new Trend('perf_trades_rows');
 const REJECT_PATTERNS = [];
 
 export function queryTrades(cfg, filter, user) {
-  const { res, tags } = client.get(cfg, SVC, '/api/v1/trades', {
+  const { res, tags } = client.get(cfg, '/api/v1/trades', {
     name: 'GET /api/v1/trades', module: MOD, user, params: filter,
   });
   const out = classifyResponse(res, tags, {

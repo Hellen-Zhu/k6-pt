@@ -1,6 +1,6 @@
 # API Captures
 
-从截图 / 抓包记录下来的真实 API 请求，作为编写 k6 场景（`src/api/`）和造数 payload（`data/worker-svc/`）的一手参考。
+从截图 / 抓包记录下来的真实 API 请求，作为编写 k6 场景（`src/api/`）和造数 payload（`data/`）的一手参考。
 
 ## 目录约定
 
@@ -30,7 +30,7 @@ data/api-captures/
 ```markdown
 # POST /api/v1/xxx
 
-- **URL**: <WORKER_SVC_BASE>/api/v1/xxx
+- **URL**: <GATEWAY_BASE>/api/v1/xxx
 - **Method**: POST
 - **Status**: 200
 - **Captured**: 2026-08-12（来源：截图 / Chrome DevTools）
@@ -47,7 +47,7 @@ data/api-captures/
 
 | 类别 | 占位符 |
 |---|---|
-| 主机 / base URL | `<WORKER_SVC_BASE>`（或 `localhost`，同 `config/environments/dev.json`） |
+| 主机 / base URL | `<GATEWAY_BASE>`（或 `localhost`，同 `config/environments/dev.json`） |
 | 用户邮箱 | `maker01@example.com` / `checker1@example.com` |
 | portfolio | `PERF-PF-A` |
 | counterparty | `10000001` / `PERF CP A` |

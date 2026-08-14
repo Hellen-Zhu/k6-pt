@@ -19,10 +19,10 @@ import exec from 'k6/execution';
 
 const PLACEHOLDER = /tbc|todo|placeholder|xxx/i;
 
-/** name: pool file basename under data/worker-svc/trade/, e.g. 'update-ids' or 'approve-tasks' */
+/** name: pool file basename under data/trade/, e.g. 'update-ids' or 'approve-tasks' */
 export function loadPool(name) {
   return new SharedArray(`consumable-${name}`, () => {
-    const doc = JSON.parse(open(import.meta.resolve(`../../../../data/worker-svc/trade/${name}.json`)));
+    const doc = JSON.parse(open(import.meta.resolve(`../../../data/trade/${name}.json`)));
     return (doc.ids || []).map(String);
   });
 }
@@ -37,7 +37,7 @@ export function consumablePreflight(pool, planned, name) {
     console.error(
       `PREFLIGHT FAILED — ${name}.json is empty or placeholders only. ` +
       `Produce it with the seed pipeline first (./prep.sh <scenario> <env> <profile> sizes and seeds everything; ` +
-      `or ./prep.sh seed-... <env> ITERATIONS=<n> for one pool — harvest auto-activates; see data/worker-svc/trade/README.md)`
+      `or ./prep.sh seed-... <env> ITERATIONS=<n> for one pool — harvest auto-activates; see data/trade/README.md)`
     );
     exec.test.abort(`${name} pool failed local validation`);
   }

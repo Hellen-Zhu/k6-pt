@@ -1,6 +1,6 @@
 # POST /api/v1/checker/tasks/{taskId}/reject
 
-- **URL**: <WORKER_SVC_BASE>/api/v1/checker/tasks/CHK-1786510336288FF779744/reject
+- **URL**: <GATEWAY_BASE>/api/v1/checker/tasks/CHK-1786510336288FF779744/reject
 - **Method**: POST，**空 body**（`-d ''`，带 `Content-Type: application/json`）
 - **Status**: 200
 - **Captured**: 2026-08-12（来源：Swagger UI 截图 IMG_3962）
@@ -10,7 +10,7 @@
 
 ## 本次抓包解决的问题：reject 不需要 reason payload
 
-`src/api/worker-svc/checker-flow/tasks.js` 原注释写着 reject "尚未校准，可能需要 reason payload"。本次抓包证实**不需要**：
+`src/api/checker-flow/tasks.js` 原注释写着 reject "尚未校准，可能需要 reason payload"。本次抓包证实**不需要**：
 
 - 请求体同样是空的 `-d ''`，与 approve 完全一致；
 - 响应是同一个标准信封 `{ code: 200, status: "SUCCESS", msg: "", data: { id, basic } }`。

@@ -5,14 +5,14 @@
  * iteration fail in the same way; intercepting them here is zero-cost and can report
  * exact row numbers.
  * "Is the data still valid today" is answered by smoke-session discipline plus the
- * long-run circuit-breaker line (see data/worker-svc/trade/README.md).
+ * long-run circuit-breaker line (see data/trade/README.md).
  */
 import exec from 'k6/execution';
-import { createCases, pickCase, DATA_FILE } from './create-case-pool.js';
-import { validateInputs } from '../../../api/worker-svc/trade/create.js';
+import { createCases, pickCase, DATA_FILE } from './create.js';
+import { validateInputs } from '../../api/trade/create.js';
 
 export function createTradePreflight() {
-  console.log('── preflight: local validation of the create case pool ──');
+  console.log('── preflight: local validation of the create testdata rows ──');
   console.log(`data=${DATA_FILE} rows=${createCases.length}`);
 
   if (createCases.length === 0) {

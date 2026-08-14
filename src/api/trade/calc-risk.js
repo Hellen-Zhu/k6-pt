@@ -16,10 +16,9 @@
  * Response contract UNCALIBRATED (capture had no Response tab): business success is judged as
  * envelope code === 200 only; tighten (status value, data shape) once a real response is on file.
  */
-import * as client from '../../../lib/http.js';
-import { classifyResponse, reasonFrom } from '../../../lib/errors.js';
+import * as client from '../../lib/http.js';
+import { classifyResponse, reasonFrom } from '../../lib/errors.js';
 
-const SVC = 'worker-svc';
 const MOD = 'trade';
 
 // No known rejection-message patterns yet — attribution falls back to the server's code enum
@@ -38,7 +37,7 @@ export function buildCalcRiskPayload(payloadRow) {
 export function calculateRisk(cfg, payloadRow, user, runPhase) {
   const id = String(payloadRow.id || '');
   const { res, tags } = client.postJson(
-    cfg, SVC, `/api/v1/trades/${encodeURIComponent(id)}/calculate-risk`, buildCalcRiskPayload(payloadRow), {
+    cfg, `/api/v1/trades/${encodeURIComponent(id)}/calculate-risk`, buildCalcRiskPayload(payloadRow), {
       // Normalized name tag — unique tradeIds must never become tag values
       name: 'POST /api/v1/trades/{id}/calculate-risk', module: MOD, user,
       tags: { runPhase: runPhase || 'main', row: String(payloadRow.__row || 0) },

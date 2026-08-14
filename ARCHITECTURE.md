@@ -30,12 +30,13 @@
 | 目录 | 职责一句话 | 关键文件 |
 |---|---|---|
 | `src/lib/` | 引擎层：options 组装、HTTP 唯一出口、三分类错误引擎、ratio 切分、报告 | bootstrap.js / http.js / errors.js / mix.js / report.js |
-| `src/api/<svc>/<mod>/` | **契约层**：每 API 一个文件 = 请求构造 + 响应成败判定（注入引擎的回调） | create.js 是最完整的样例 |
-| `src/pools/<svc>/<mod>/` | 数据供给：三种池纪律 + 参数池 + preflight 数据门 | 见「池分类学」 |
+| `src/api/<mod>/` | **契约层**：每 API 一个文件 = 请求构造 + 响应成败判定（注入引擎的回调） | create.js 是最完整的样例 |
+| `src/testdata/<mod>/` | 请求形状数据集：行加载/轮转/校验 + dat 预载，与 api client 同名配对 | 见「数据供给分类学」 |
+| `src/pools/<mod>/` | id 池（服务端状态引用）：三种取用纪律 + preflight 数据门 | 见「数据供给分类学」 |
 | `src/scenarios/` | 单 API 测量入口，每个 ~30 行 | trades-update.js 是池场景样例 |
 | `src/mixed/` | 混合形态入口，自包含 flow 表（刻意不共享 flow 模块，见「设计决策志」） | trade-mix-full.js |
 | `src/seed/` | 造数生产者（独立 k6 入口，仅 prep.sh 调用） | 2 套流水线 + 2 个别名 |
-| `data/<svc>/<mod>/` | 池文件与 case 文件；仓库里只放**形状**（占位符），真实值只在私有副本 | README.md 有红线纪律 |
+| `data/<mod>/` | 池文件与 case 文件；仓库里只放**形状**（占位符），真实值只在私有副本 | README.md 有红线纪律 |
 | `data/api-captures/` | 抓包存档 = 契约的证据链（每个 client 头部注释都引用它） | |
 | `config/environments/` | 环境（单网关端点 + 身份池 + 白名单） | |
 | `config/slas/` | 每 API 百分位 SLA（挂在 perf_success_duration 上） | |
@@ -53,12 +54,12 @@
 | 本质 | 测量场景**内部**的 JS 模块 | **独立的 k6 入口**，prep.sh 单独调一次 k6 |
 | 何时运行 | 测量轮的 init / setup / VU 阶段 | 测量**之前**的 seed 轮 |
 | 发 HTTP 请求吗 | 一个都不发 | 发（create→approve，带 `runPhase=seed` 标签可切片） |
-| 读什么 | `data/worker-svc/trade/*.json` | 造数 case 池（trades-create.json）+ dat |
+| 读什么 | `data/trade/*.json` | 造数 case 池（trades-create.json）+ dat |
 | 产出什么 | 每次迭代交给场景一个 id / 数据行 | k6.log 里的 `SEEDID <id>` 行 |
 | 谁落盘 | 不落盘 | `scripts/seed-harvest.sh` grep SEEDID → 写池文件并激活 |
 | 失败形态 | `PREFLIGHT FAILED`，0 请求即中止 | 收获量 < 需求×1.2，prep 报错退出 |
 
-连接两者的唯一媒介是 **`data/worker-svc/trade/` 的池文件**：seed 写（经 harvest），pools 读。
+连接两者的唯一媒介是 **`data/trade/` 的池文件**：seed 写（经 harvest），pools 读。
 仓库里池文件永远是 `TBC-` 占位符，因为真实 id 是**某个环境的服务端状态**——只有对着那个
 环境跑一次 prep 才存在；换环境即作废。
 
@@ -74,16 +75,16 @@
 别名文件只有一行 re-export，但**文件名本身是路由键**（prep.sh 靠 `-f src/seed/<名字>.js`
 进入生产者模式；seed-harvest.sh 靠名字选收获目标文件）。删掉别名 = 收获落错文件。
 
-## 池分类学：四种数据供给
+## 数据供给分类学：testdata 与三种 id 池
 
-关键区分：**id 池是服务端状态（要 seed），参数池是请求形状（手工/抓包维护，与 seed 无关）。**
+关键区分：**id 池是服务端状态（要 seed），testdata 是请求形状（手工/抓包维护，与 seed 无关）。**
 
 | 种类 | 模块 | 实例 | 纪律 | 何时重铺 |
 |---|---|---|---|---|
 | 只读轮转 | trade-ids-pool.js | trade-ids | 循环取用，只读 | id 过期（症状 http-404）时重抓 |
 | 一次性游标 | consumable-pool.js | update-ids / approve-tasks / event-ids | `iterationInTest` 全局游标每 id 恰用一次；耗尽**跳过不复用** | **每轮之后**（一轮即脏） |
 | 永久循环 | cycle-pool.js | amend-cycle-ids | update→reject 把 id 还原回 LIVE；体积门保证轮转回来前跑完一圈 | 仅中毒后（症状 http-409） |
-| 参数池 | create-case-pool.js / event-case-pool.js / calc-risk-payload-pool.js | trades-create + dat / event-cases / calc-risk-payloads | 模板永久轮转，无服务端状态 | 手工维护（抓包校准） |
+| testdata | testdata/.../create.js / trigger-event.js / calc-risk.js | trades-create + dat / event-cases / calc-risk-payloads | 模板永久轮转，无服务端状态 | 手工维护（抓包校准） |
 
 各自的正确性条件写在模块头注释里：一次性游标为什么能防 http-400 状态冲突
 （consumable-pool.js 头部）、循环池的重访周期公式 `max(50, 峰值速率 × 链路p99和 × 3)`
@@ -135,7 +136,7 @@ SLA 百分位只看 `perf_success_duration`（业务成功请求的耗时）—�
 | 3 | `scripts/seed-harvest.sh` case 表 | 生产者名 → 收获目标文件 |
 | 4 | `scripts/seed-harvest.sh` 魔法串 `"seed-update-pool"` | 只有它顺手刷新 trade-ids |
 | 5 | 各场景 setup 的 `POOLPLAN <池名>` 输出 | 池名必须与 #1 的 key 一致 |
-| 6 | `data/worker-svc/trade/<池名>.json` | 文件名必须与池名一致 |
+| 6 | `data/trade/<池名>.json` | 文件名必须与池名一致 |
 
 > ⚠ **已知陷阱**（2026-08-13 实测确认，暂未修）：`./prep.sh` 收到拼错的生产者/场景名会落进
 > 白名单兜底分支，打印 "consumes no seeded pools — nothing to do" 并 **exit 0**——看起来成功，
@@ -144,14 +145,14 @@ SLA 百分位只看 `perf_success_duration`（业务成功请求的耗时）—�
 ## Checklist：加一个 API / 加一个 mixed 形态
 
 **只读 API**（无 bash 改动）：
-1. `src/api/<svc>/<mod>/<api>.js` —— 契约（照抄 detail.js 或 query.js 的形状）
-2. `config/slas/<svc>/<mod>.json` 加一个 key
+1. `src/api/<mod>/<api>.js` —— 契约（照抄 detail.js 或 query.js 的形状）
+2. `config/slas/<mod>.json` 加一个 key
 3. `src/scenarios/<场景名>.js` —— 照抄 trades-query.js（~20 行）
 
 **带消耗池的写路径 API**（会碰到全部 6 个约定点）：
 1. api 契约 + `data/` payload 文件（如需要）
 2. SLA key
-3. `data/worker-svc/trade/<池名>.json` 占位文件
+3. `data/trade/<池名>.json` 占位文件
 4. `src/seed/seed-<池名>.js` —— 若 create→approve 流水线适用，1 行 re-export 即可
 5. 场景文件：POOLPLAN 上报 + consumablePreflight + takeUnique 耗尽跳过（照抄 trades-update.js）
 6. **bash 三处**：约定点 #1、#2、#3 各加一行
@@ -169,7 +170,7 @@ SLA 百分位只看 `perf_success_duration`（业务成功请求的耗时）—�
 | 2026-08-07 | 混合方法论：真实 API 比例、无排序、业务倍数缩放；每 API 挂名判 SLA | 各 mixed 头注释 |
 | 2026-08-11 | mixed 入口**自包含**，退役共享 `_trade-flows` 模块（读一个文件看懂全场景） | git 3a23949 |
 | 2026-08-11 | 全家跑 fresh trades，退役 blended approve 池（keep it simple） | git a2129ae |
-| 2026-08-12 | 单网关端点：服务名只作归因标签，不参与路由 | lib/config.js `baseUrl` |
+| 2026-08-12 | 单网关端点（2026-08-14 收尾：service 维度连同目录/标签/签名全部退役，module 为唯一归因层） | lib/config.js `baseUrl` |
 | 2026-08-12 | chain 表的 RATE 语义 = **HTTP 请求数份额**（RATE=10 即网关 10 req/s） | lib/mix.js 头注释 |
 | 2026-08-12 | 抓包红线：仓库只放形状，真实值只在私有副本；pre-commit 守卫 | data/api-captures/README.md |
 | 2026-08-12 | run/prep 分家：跑与铺各一条命令 | git 0487140 |

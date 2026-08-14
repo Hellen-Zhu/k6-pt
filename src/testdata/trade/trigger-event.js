@@ -1,5 +1,5 @@
 /*
- * Lifecycle-event case pool — REUSABLE rotation (parameter pool):
+ * Lifecycle-event testdata rows — REUSABLE rotation (request-shape dataset):
  * one row = one event template ({ eventType, data[], reason }); the tradeId it fires against
  * comes separately from the event-ids CONSUMABLE pool, so templates rotate forever while ids
  * are spent exactly once. Row values in the repo are placeholders; real captured values live
@@ -10,7 +10,7 @@ import { SharedArray } from 'k6/data';
 import exec from 'k6/execution';
 
 export const eventCases = new SharedArray('event-cases', () => {
-  const doc = JSON.parse(open(import.meta.resolve('../../../../data/worker-svc/trade/event-cases.json')));
+  const doc = JSON.parse(open(import.meta.resolve('../../../data/trade/event-cases.json')));
   return (doc.rows || []).map((r, n) => Object.assign({ __row: n + 1 }, r));
 });
 
@@ -28,7 +28,7 @@ export function eventCasesPreflight() {
     if (!r.reason || !String(r.reason).trim()) problems.push(`row ${r.__row}: reason missing`);
   });
   if (problems.length) {
-    console.error(`PREFLIGHT FAILED — event-cases.json invalid: ${problems.join('; ')} (see data/worker-svc/trade/README.md)`);
-    exec.test.abort('event case pool failed local validation');
+    console.error(`PREFLIGHT FAILED — event-cases.json invalid: ${problems.join('; ')} (see data/trade/README.md)`);
+    exec.test.abort('event testdata rows failed local validation');
   }
 }

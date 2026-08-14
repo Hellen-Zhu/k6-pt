@@ -2,7 +2,7 @@
  * Seed producer for the checker-approve measurement pool: create only, DON'T approve —
  * every successful create leaves one pending checker task, and its CHK taskId (parsed from
  * the response msg) is the harvest. prep.sh (via scripts/seed-harvest.sh) extracts the SEEDID lines from k6.log into
- * seed-pool.json; activate with:  cp <run dir>/seed-pool.json data/worker-svc/trade/approve-tasks.json
+ * seed-pool.json; activate with:  cp <run dir>/seed-pool.json data/trade/approve-tasks.json
  *
  * Run with the seed profile:  ./prep.sh seed-approve-pool <env> ITERATIONS=<pool size x 1.3>
  * All requests carry runPhase=seed so seed traffic can be sliced out of any metric view.
@@ -10,12 +10,12 @@
 import exec from 'k6/execution';
 import { cfg, buildOptions } from '../lib/bootstrap.js';
 import { pickUser } from '../lib/users.js';
-import { pickCase } from '../pools/worker-svc/trade/create-case-pool.js';
-import { createTrade } from '../api/worker-svc/trade/create.js';
-import { createTradePreflight } from '../pools/worker-svc/trade/create-trade-preflight.js';
+import { pickCase } from '../testdata/trade/create.js';
+import { createTrade } from '../api/trade/create.js';
+import { createTradePreflight } from '../testdata/trade/create-preflight.js';
 import { ERR } from '../lib/errors.js';
 
-export const options = buildOptions('worker-svc/trade', 'create');
+export const options = buildOptions('trade', 'create');
 
 export function setup() {
   return createTradePreflight();

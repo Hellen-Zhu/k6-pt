@@ -30,10 +30,10 @@ import exec from 'k6/execution';
 
 const PLACEHOLDER = /tbc|todo|placeholder|xxx/i;
 
-/** name: pool file basename under data/worker-svc/trade/, e.g. 'amend-cycle-ids' */
+/** name: pool file basename under data/trade/, e.g. 'amend-cycle-ids' */
 export function loadCyclePool(name) {
   return new SharedArray(`cycle-${name}`, () => {
-    const doc = JSON.parse(open(import.meta.resolve(`../../../../data/worker-svc/trade/${name}.json`)));
+    const doc = JSON.parse(open(import.meta.resolve(`../../../data/trade/${name}.json`)));
     return (doc.ids || []).map(String);
   });
 }

@@ -22,8 +22,8 @@ export function parseEnvConfig(rawText) {
 
 /*
  * Every API goes through the ONE gateway endpoint (2026-08-12 decision — the per-service URL
- * map is gone; service names live on only as metric tags for attribution). The service
- * argument callers pass to lib/http.js no longer affects routing.
+ * map is gone; 2026-08-14: the service dimension is retired everywhere — directories, tags,
+ * client signatures. module is the sole attribution layer below the endpoint name.
  */
 export function baseUrl(cfg) {
   return cfg.gatewayUrl;

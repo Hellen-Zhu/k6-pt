@@ -4,7 +4,7 @@
 #
 # Why this exists: API captures and env configs are exactly the files that tend to carry a real
 # hostname, a real user email or a real counterparty value out of a private environment. The repo's
-# standing red line (config/environments/dev.json, data/worker-svc/trade/event-cases.json) is that
+# standing red line (config/environments/dev.json, data/trade/event-cases.json) is that
 # SHAPES live here and real VALUES live only in the private copy — this hook enforces it.
 #
 # The rules below are deliberately GENERIC (allow-list based). Site-specific literals must never
@@ -69,7 +69,7 @@ cat >&2 <<EOF
 $hits
 
 This repository is PUBLIC. Use the placeholders the repo already uses:
-  hostname     -> <WORKER_SVC_BASE>   (or localhost, as in config/environments/dev.json)
+  hostname     -> <GATEWAY_BASE>   (or localhost, as in config/environments/dev.json)
   user email   -> maker01@example.com / checker1@example.com
   portfolio    -> PERF-PF-A
   counterparty -> 10000001 / "PERF CP A"

@@ -1,15 +1,14 @@
 import http from 'k6/http';
-import * as client from '../../../lib/http.js';
-import { classifyResponse, reasonFrom } from '../../../lib/errors.js';
+import * as client from '../../lib/http.js';
+import { classifyResponse, reasonFrom } from '../../lib/errors.js';
 import { extractTaskId } from '../checker-flow/tasks.js';
-import { getDat, datName } from '../../../pools/worker-svc/trade/create-case-pool.js';
+import { getDat, datName } from '../../testdata/trade/create.js';
 
-const SVC = 'worker-svc';
 const MOD = 'trade';
 
 // The read path (queryTrades / perf_trades_rows) lives in ./query.js (init-graph isolation, final review #4):
-// this file holds only create + its ./create-case-pool.js data graph, so load-testing other APIs does not
-// transitively load the case pool and the dat binaries.
+// this file holds only create + its ./create.js data graph, so load-testing other APIs does not
+// transitively load the testdata rows and the dat binaries.
 
 /*
  * ── Response contract for create (calibrated against live trade-performance measurements;
@@ -80,11 +79,11 @@ export function validateInputs(caseRow) {
   const problems = [];
   ['portfolioId', 'counterpartyFmId', 'counterpartyName'].forEach((k) => {
     const v = caseRow[k];
-    if (!v || !String(v).trim()) problems.push(`${k} unresolved (check the data file path and field names, see pools/worker-svc/trade/create-case-pool.js)`);
-    else if (PLACEHOLDER.test(v)) problems.push(`${k}='${v}' is still a placeholder (see data/worker-svc/trade/README.md)`);
+    if (!v || !String(v).trim()) problems.push(`${k} unresolved (check the data file path and field names, see testdata/trade/create.js)`);
+    else if (PLACEHOLDER.test(v)) problems.push(`${k}='${v}' is still a placeholder (see data/trade/README.md)`);
   });
   if (!caseRow.productId || !String(caseRow.productId).trim()) {
-    problems.push('productId unresolved (the dat is located by the same-name-as-productId convention, see pools/worker-svc/trade/create-case-pool.js)');
+    problems.push('productId unresolved (the dat is located by the same-name-as-productId convention, see testdata/trade/create.js)');
   }
   return problems;
 }
@@ -95,7 +94,7 @@ export function createTrade(cfg, caseRow, user, runPhase) {
     trade: buildTradePayload(caseRow),
     datFile: http.file(getDat(caseRow.productId), datName(caseRow.productId), 'application/octet-stream'),
   };
-  const { res, tags } = client.postMultipart(cfg, SVC, '/api/v1/trades/create', body, {
+  const { res, tags } = client.postMultipart(cfg, '/api/v1/trades/create', body, {
     name: 'POST /api/v1/trades/create', module: MOD, user,
     // Low-cardinality tags: row = data row number (__row), so a bad row can be sliced straight out
     // of the metrics; unique values like tradeId are strictly forbidden

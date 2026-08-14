@@ -47,39 +47,39 @@ import { splitByRatio } from '../lib/mix.js';
 import { pickUser } from '../lib/users.js';
 import { pickAt } from '../lib/data.js';
 import { ERR } from '../lib/errors.js';
-import { pickCase } from '../pools/worker-svc/trade/create-case-pool.js';
-import { pickTradeId, tradeIdsPreflight } from '../pools/worker-svc/trade/trade-ids-pool.js';
-import { createTradePreflight } from '../pools/worker-svc/trade/create-trade-preflight.js';
-import { pickEventCase, eventCasesPreflight } from '../pools/worker-svc/trade/event-case-pool.js';
-import { pickCalcRiskPayload, calcRiskPayloadsPreflight } from '../pools/worker-svc/trade/calc-risk-payload-pool.js';
-import { loadCyclePool, cyclePreflight, pickCycleId } from '../pools/worker-svc/trade/cycle-pool.js';
-import { createTrade } from '../api/worker-svc/trade/create.js';
-import { updateTrade } from '../api/worker-svc/trade/update.js';
-import { approveTask, rejectTask } from '../api/worker-svc/checker-flow/tasks.js';
-import { queryTrades } from '../api/worker-svc/trade/query.js';
-import { getTrade } from '../api/worker-svc/trade/detail.js';
-import { triggerEvent } from '../api/worker-svc/trade/trigger-event.js';
-import { calculateRisk } from '../api/worker-svc/trade/calc-risk.js';
+import { pickCase } from '../testdata/trade/create.js';
+import { pickTradeId, tradeIdsPreflight } from '../pools/trade/trade-ids-pool.js';
+import { createTradePreflight } from '../testdata/trade/create-preflight.js';
+import { pickEventCase, eventCasesPreflight } from '../testdata/trade/trigger-event.js';
+import { pickCalcRiskPayload, calcRiskPayloadsPreflight } from '../testdata/trade/calc-risk.js';
+import { loadCyclePool, cyclePreflight, pickCycleId } from '../pools/trade/cycle-pool.js';
+import { createTrade } from '../api/trade/create.js';
+import { updateTrade } from '../api/trade/update.js';
+import { approveTask, rejectTask } from '../api/checker-flow/tasks.js';
+import { queryTrades } from '../api/trade/query.js';
+import { getTrade } from '../api/trade/detail.js';
+import { triggerEvent } from '../api/trade/trigger-event.js';
+import { calculateRisk } from '../api/trade/calc-risk.js';
 
 // Request shares (sum 1.0). create:amend:event = 2:4:1 is the business picture; the
 // chain shapes (reqPerIter) are structural, not tunable — see header.
 const MIX = { query: 0.2, detail: 0.1, createChain: 0.1, eventChain: 0.2, amendCycle: 0.4 };
 
-const QUERY_DATA = loadData('worker-svc/trade/trades-query');
-const UPDATE_DATA = loadData('worker-svc/trade/update-payload');
+const QUERY_DATA = loadData('trade/trades-query');
+const UPDATE_DATA = loadData('trade/update-payload');
 const UPDATE_CASES = UPDATE_DATA.cases.map((c, n) => Object.assign({ __row: n + 1 }, c));
 const CYCLE_POOL = loadCyclePool('amend-cycle-ids');
 
 const base = buildOptionsMulti(
   [
-    ['worker-svc/trade', 'query'],
-    ['worker-svc/trade', 'detail'],
-    ['worker-svc/trade', 'create'],
-    ['worker-svc/checker-flow', 'approve'],
-    ['worker-svc/trade', 'update'],
-    ['worker-svc/checker-flow', 'reject'],
-    ['worker-svc/trade', 'triggerEvent'],
-    ['worker-svc/trade', 'calcRisk'],
+    ['trade', 'query'],
+    ['trade', 'detail'],
+    ['trade', 'create'],
+    ['checker-flow', 'approve'],
+    ['trade', 'update'],
+    ['checker-flow', 'reject'],
+    ['trade', 'triggerEvent'],
+    ['trade', 'calcRisk'],
   ],
   // Same empty-DB guard as the single-API query scenario
   { perf_trades_rows: ['avg>0'] },

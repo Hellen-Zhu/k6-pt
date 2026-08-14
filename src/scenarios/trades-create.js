@@ -1,13 +1,13 @@
 import exec from 'k6/execution';
 import { cfg, buildOptions } from '../lib/bootstrap.js';
 import { pickUser } from '../lib/users.js';
-import { pickCase } from '../pools/worker-svc/trade/create-case-pool.js';
-import { createTrade } from '../api/worker-svc/trade/create.js';
-import { createTradePreflight } from '../pools/worker-svc/trade/create-trade-preflight.js';
+import { pickCase } from '../testdata/trade/create.js';
+import { createTrade } from '../api/trade/create.js';
+import { createTradePreflight } from '../testdata/trade/create-preflight.js';
 
-// P0 · worker-svc/trade · write path
+// P0 · trade · write path
 
-export const options = buildOptions('worker-svc/trade', 'create');
+export const options = buildOptions('trade', 'create');
 
 export function setup() {
   return createTradePreflight();

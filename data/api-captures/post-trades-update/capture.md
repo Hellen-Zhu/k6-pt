@@ -1,6 +1,6 @@
 # POST /api/v1/trades/{tradeId}/update
 
-- **URL**: <WORKER_SVC_BASE>/api/v1/trades/TRD-178645853025698777B95/update
+- **URL**: <GATEWAY_BASE>/api/v1/trades/TRD-178645853025698777B95/update
 - **Method**: POST
 - **Status**: 200（amend 成功，进入审批）/ 409（状态不允许 amend）
 - **Captured**: 2026-08-12（来源：Swagger UI 截图 IMG_3954~3956，server date: Wed,12 Aug 2026 03:58:15 GMT）
@@ -15,7 +15,7 @@
 - amend 提交成功后 trade 进入 `Pending Approval Live`（basic.status），`eventStatus: Amended`，等待 checker 审批（响应 msg 里带 `TaskId: CHK-...`）。
 - **在 approve/reject 之前再次 amend 会报 409**：`Action 'AMEND' is not permitted when trade status is 'Pending Approval Live'`。
 - approve 或 reject 之后可以继续 amend。
-- 对压测的含义：同一个 trade id 不能连续 update，脚本里每次 amend 后必须先走 checker approve/reject（见 `src/api/worker-svc/checker-flow/tasks.js`），或者每个 VU 用独立的 trade id 池避免撞 409。
+- 对压测的含义：同一个 trade id 不能连续 update，脚本里每次 amend 后必须先走 checker approve/reject（见 `src/api/checker-flow/tasks.js`），或者每个 VU 用独立的 trade id 池避免撞 409。
 
 ## 请求
 
@@ -37,7 +37,7 @@
 
 其余字段（`code`、`msg` 里的 TaskId、`data.basic.version` 递增、`data.basic.status`）只作排查线索，不参与判定。
 
-实现在 `src/api/worker-svc/trade/update.js` 的 `business` 钩子；两条断言各自有独立的 reason tag：
+实现在 `src/api/trade/update.js` 的 `business` 钩子；两条断言各自有独立的 reason tag：
 - `status` 不符 → 走 `reasonFrom()`（模式表 / `code-N`）
 - `eventStatus` 不符 → 固定 `event-status`
 

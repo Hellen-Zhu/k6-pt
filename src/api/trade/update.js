@@ -13,20 +13,19 @@
  * i.e. an id-pool defect will read as a system failure in the verdict. Keep the pool unique.
  *
  * Kept isolated from create's data graph (same init-graph discipline as query.js): this file
- * carries no case pool and no dat binaries.
+ * carries no testdata rows and no dat binaries.
  */
-import * as client from '../../../lib/http.js';
-import { classifyResponse, reasonFrom } from '../../../lib/errors.js';
+import * as client from '../../lib/http.js';
+import { classifyResponse, reasonFrom } from '../../lib/errors.js';
 import { extractTaskId } from '../checker-flow/tasks.js';
 
-const SVC = 'worker-svc';
 const MOD = 'trade';
 
 // No known rejection-message patterns yet — attribution falls back to the server's code enum (code-N)
 const REJECT_PATTERNS = [];
 
 /**
- * payloadRow comes from data/worker-svc/trade/update-payload.json. Only whitelisted keys are
+ * payloadRow comes from data/trade/update-payload.json. Only whitelisted keys are
  * sent — the server rejects unknown fields, and the loader's bookkeeping key (__row) must
  * never leak into the request body.
  */
@@ -35,7 +34,7 @@ export function buildUpdatePayload(payloadRow) {
 }
 
 export function updateTrade(cfg, tradeId, payloadRow, user, runPhase) {
-  const { res, tags } = client.postJson(cfg, SVC, `/api/v1/trades/${tradeId}/update`, buildUpdatePayload(payloadRow), {
+  const { res, tags } = client.postJson(cfg, `/api/v1/trades/${tradeId}/update`, buildUpdatePayload(payloadRow), {
     // Normalized name tag — unique tradeIds must never become tag values
     name: 'POST /api/v1/trades/{id}/update', module: MOD, user,
     tags: { runPhase: runPhase || 'main', row: String(payloadRow.__row || 0) },

@@ -2,7 +2,7 @@
  * Seed producer for trade-mix-full's PERMANENT amend-cycle pool — the SAME create→approve
  * pipeline as seed-update-pool (a LIVE tradeId is a LIVE tradeId; only the harvest
  * destination differs: seed-harvest.sh maps this entry name to
- * data/worker-svc/trade/amend-cycle-ids.json).
+ * data/trade/amend-cycle-ids.json).
  *
  *   ./prep.sh seed-amend-cycle-pool <env> ITERATIONS=<pool floor x 1.6>
  *

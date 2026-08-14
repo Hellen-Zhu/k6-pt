@@ -35,10 +35,9 @@
  * (data.results[].childTradeIds, suffixed -NOV- / -PNOV- / -ALLOC-n), so a long event run keeps
  * growing the trade table and with it the cost of every full-table read in the same run.
  */
-import * as client from '../../../lib/http.js';
-import { classifyResponse, reasonFrom } from '../../../lib/errors.js';
+import * as client from '../../lib/http.js';
+import { classifyResponse, reasonFrom } from '../../lib/errors.js';
 
-const SVC = 'worker-svc';
 const MOD = 'trade';
 
 const REJECT_PATTERNS = [];
@@ -56,7 +55,7 @@ const BULK_OK = ['ALL_EXECUTED', 'ALL_PENDING_APPROVAL'];
 /* Date tokens keep the repo/private case rows evergreen — captured literal dates go stale and
  * turn into business rejections weeks later. Same T+2 BUSINESS-day rules as create.js's
  * premiumDate helper (weekends skipped, holiday calendars not modeled); duplicated here rather
- * than imported because create.js carries the case-pool + dat init graph (isolation discipline). */
+ * than imported because create.js carries the testdata rows + dat init graph (isolation discipline). */
 function todayIso() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -89,7 +88,7 @@ export function buildEventPayload(eventCase, tradeId) {
 
 export function triggerEvent(cfg, tradeId, eventCase, user, runPhase) {
   const { res, tags } = client.postJson(
-    cfg, SVC, '/api/v1/trades/trigger-event',
+    cfg, '/api/v1/trades/trigger-event',
     buildEventPayload(eventCase, tradeId), {
       // Collection endpoint — the tradeId travels in the body only, so the raw URL is already
       // low-cardinality; eventType is a deliberate LOW-cardinality tag (5 values) so any

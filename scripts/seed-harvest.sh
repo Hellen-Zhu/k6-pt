@@ -19,15 +19,15 @@ POOL_FILE="$RUN_DIR/seed-pool.json"
 # Producer → pool-file mapping keeps the activation hint copy-pasteable;
 # an unmapped future producer falls back to the generic hint
 case "$SCENARIO" in
-  seed-update-pool)      POOL_TARGET="data/worker-svc/trade/update-ids.json" ;;
-  seed-approve-pool)     POOL_TARGET="data/worker-svc/trade/approve-tasks.json" ;;
-  seed-event-pool)       POOL_TARGET="data/worker-svc/trade/event-ids.json" ;;
-  seed-amend-cycle-pool) POOL_TARGET="data/worker-svc/trade/amend-cycle-ids.json" ;;
+  seed-update-pool)      POOL_TARGET="data/trade/update-ids.json" ;;
+  seed-approve-pool)     POOL_TARGET="data/trade/approve-tasks.json" ;;
+  seed-event-pool)       POOL_TARGET="data/trade/event-ids.json" ;;
+  seed-amend-cycle-pool) POOL_TARGET="data/trade/amend-cycle-ids.json" ;;
   *)                     POOL_TARGET="" ;;
 esac
 {
   echo '{'
-  echo "  \"_comment\": \"Harvested by seed-harvest.sh (${SCENARIO}) from SEEDID lines. Activate: cp this file over ${POOL_TARGET:-the matching pool file under data/worker-svc/trade/}. Consumable pools are single-use (re-seed per round); the amend-cycle pool is permanent (reject restores every id).\","
+  echo "  \"_comment\": \"Harvested by seed-harvest.sh (${SCENARIO}) from SEEDID lines. Activate: cp this file over ${POOL_TARGET:-the matching pool file under data/trade/}. Consumable pools are single-use (re-seed per round); the amend-cycle pool is permanent (reject restores every id).\","
   echo '  "ids": ['
   sed -n 's/.*SEEDID \([A-Za-z0-9-]\{1,\}\).*/    "\1",/p' "$RUN_DIR/k6.log" | sed '$ s/,$//'
   echo '  ]'
@@ -46,7 +46,7 @@ elif [[ -n "$POOL_TARGET" && "${SEED_AUTO_ACTIVATE:-true}" != "false" ]]; then
   # legitimate detail targets. Deliberately unconditional (team decision 2026-08-10): one seed
   # session refreshes everything together. When the standing-data waterline matures, a
   # GET-based collector over real standing trades becomes the formal source and this retires.
-  TRADE_IDS_FILE="data/worker-svc/trade/trade-ids.json"
+  TRADE_IDS_FILE="data/trade/trade-ids.json"
   if [[ "$SCENARIO" == "seed-update-pool" ]]; then
     [[ -f "$TRADE_IDS_FILE" ]] && cp "$TRADE_IDS_FILE" "$RUN_DIR/replaced-trade-ids.json"
     cp "$POOL_FILE" "$TRADE_IDS_FILE"
@@ -55,5 +55,5 @@ elif [[ -n "$POOL_TARGET" && "${SEED_AUTO_ACTIVATE:-true}" != "false" ]]; then
 elif [[ -n "$POOL_TARGET" ]]; then
   echo "  activate: cp $POOL_FILE $POOL_TARGET   (auto-activation disabled by SEED_AUTO_ACTIVATE=false)"
 else
-  echo "  activate: cp $POOL_FILE data/worker-svc/trade/<matching-pool>.json"
+  echo "  activate: cp $POOL_FILE data/trade/<matching-pool>.json"
 fi

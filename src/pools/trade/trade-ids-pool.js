@@ -15,10 +15,10 @@ import exec from 'k6/execution';
 const PLACEHOLDER = /tbc|todo|placeholder|xxx/i;
 
 export const tradeIds = new SharedArray('trade-ids', () => {
-  const doc = JSON.parse(open(import.meta.resolve('../../../../data/worker-svc/trade/trade-ids.json')));
+  const doc = JSON.parse(open(import.meta.resolve('../../../data/trade/trade-ids.json')));
   const ids = (doc.ids || []).map(String);
   if (ids.length === 0) {
-    throw new Error('data/worker-svc/trade/trade-ids.json has no ids (capture procedure: see the README in that directory)');
+    throw new Error('data/trade/trade-ids.json has no ids (capture procedure: see the README in that directory)');
   }
   return ids;
 });
@@ -32,7 +32,7 @@ export function tradeIdsPreflight() {
   if (bad.length > 0) {
     console.error(
       `PREFLIGHT FAILED — trade-ids.json still contains placeholders: ${bad.slice(0, 5).join(', ')}` +
-      ` (${bad.length} total; capture procedure: see data/worker-svc/trade/README.md)`
+      ` (${bad.length} total; capture procedure: see data/trade/README.md)`
     );
     exec.test.abort('trade ID pool failed local validation');
   }

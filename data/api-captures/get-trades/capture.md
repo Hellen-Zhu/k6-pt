@@ -1,6 +1,6 @@
 # GET /api/v1/trades
 
-- **URL**: <WORKER_SVC_BASE>/api/v1/trades
+- **URL**: <GATEWAY_BASE>/api/v1/trades
 - **Method**: GET（本次抓包无 query 参数，全量列表）
 - **Status**: 200
 - **Captured**: 2026-08-12（来源：Swagger UI 截图 IMG_3957，server date: Wed,12 Aug 2026 04:06:01 GMT）
@@ -22,7 +22,7 @@
 
 ## 业务断言（现有实现）
 
-`src/api/worker-svc/trade/query.js`：
+`src/api/trade/query.js`：
 - business：`code === 200 && status === 'SUCCESS'`
 - shape：`Array.isArray(data.data)`
 - 行数进 `perf_trades_rows` Trend，场景挂 `avg>0` 阈值防空库

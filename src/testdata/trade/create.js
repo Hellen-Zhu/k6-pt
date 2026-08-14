@@ -1,5 +1,5 @@
 /*
- * Data supply for the create path: case-pool instantiation + dat preloading.
+ * Data supply for the create path: row loading + dat preloading.
  * The generic parsing machinery lives in lib/rows.js; this file does only the two path-specific things.
  * k6 constraints: open() is available only in the init phase → all dat files must be read once at load time;
  * SharedArray can hold only JSON-serializable data → row data goes into the SharedArray (a single copy
@@ -7,21 +7,21 @@
  * dat bytes — beware large files.
  */
 import { SharedArray } from 'k6/data';
-import { rowsFromJson } from '../../../lib/rows.js';
+import { rowsFromJson } from '../../lib/rows.js';
 
 function envOr(key, fallback) {
   const v = __ENV[key];
   return v === undefined || v === '' ? fallback : v;
 }
 
-// Switching variant pools (controlled experiments) needs no script change: CREATE_DATA_FILE=data/worker-svc/trade/<variant>.json
-export const DATA_FILE = envOr('CREATE_DATA_FILE', 'data/worker-svc/trade/trades-create.json');
+// Switching variant pools (controlled experiments) needs no script change: CREATE_DATA_FILE=data/trade/<variant>.json
+export const DATA_FILE = envOr('CREATE_DATA_FILE', 'data/trade/trades-create.json');
 if (!DATA_FILE.endsWith('.json')) {
   throw new Error(`data file must be .json: ${DATA_FILE} (contract: see lib/rows.js)`);
 }
 
 export const createCases = new SharedArray('create-cases', () =>
-  rowsFromJson(open(import.meta.resolve(`../../../../${DATA_FILE}`)), DATA_FILE)
+  rowsFromJson(open(import.meta.resolve(`../../../${DATA_FILE}`)), DATA_FILE)
 );
 
 /** Global cursor rotation: use exec.scenario.iterationInTest as i — uniform coverage and reproducible */
@@ -36,7 +36,7 @@ export function pickCase(i) {
 // named file + add one data row. If a single product ever needs multiple dat samples, add an optional
 // datFile override column to the rows (YAGNI for now). Only products actually referenced by the data
 // file are preloaded.
-const DAT_ROOT = '../../../../data/datfiles/products/';
+const DAT_ROOT = '../../../data/datfiles/products/';
 // productId is spliced into a file path: run it through a character-set gate first
 // (which also catches spelling anomalies right at load time)
 const PRODUCT_TYPE_RE = /^[A-Za-z0-9_-]+$/;

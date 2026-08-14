@@ -2,16 +2,16 @@ import exec from 'k6/execution';
 import { cfg, loadData, buildOptions, plannedIterations } from '../lib/bootstrap.js';
 import { pickUser } from '../lib/users.js';
 import { pickAt } from '../lib/data.js';
-import { loadPool, consumablePreflight, takeUnique } from '../pools/worker-svc/trade/consumable-pool.js';
-import { updateTrade } from '../api/worker-svc/trade/update.js';
+import { loadPool, consumablePreflight, takeUnique } from '../pools/trade/consumable-pool.js';
+import { updateTrade } from '../api/trade/update.js';
 
-// P0 · worker-svc/trade · write path (high-frequency amend — consumes one LIVE id per request)
+// P0 · trade · write path (high-frequency amend — consumes one LIVE id per request)
 
-const DATA = loadData('worker-svc/trade/update-payload');
+const DATA = loadData('trade/update-payload');
 const CASES = DATA.cases.map((c, n) => Object.assign({ __row: n + 1 }, c));
 const POOL = loadPool('update-ids');
 
-export const options = buildOptions('worker-svc/trade', 'update');
+export const options = buildOptions('trade', 'update');
 // Captured at init: k6 replaces the exported options binding with its consolidated version
 // after init, so reading options.scenarios inside setup() is not safe
 const PLANNED = plannedIterations(options);

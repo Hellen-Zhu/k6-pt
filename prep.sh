@@ -122,7 +122,7 @@ done <<< "$PLANS"
 # environment or a cleaned DB look valid here and only surface as http-404 mid-round.
 # Always seed a fresh batch; skip only when this round's demand already runs
 # seed-update-pool, whose harvest refreshes trade-ids anyway (seed-harvest.sh side effect).
-TRADE_IDS_FILE="data/worker-svc/trade/trade-ids.json"
+TRADE_IDS_FILE="data/trade/trade-ids.json"
 case "$SCENARIO" in trade-mix-*)
   if ! grep -q '^update-ids ' <<< "$PLANS"; then
     echo "▶ prep     refreshing the trade-ids read pool — seeding a fresh batch via seed-update-pool ITERATIONS=50"
@@ -138,7 +138,7 @@ while read -r pool planned; do
   iter=$(( (planned * 16 + 9) / 10 )); [[ "$iter" -lt $((needed + 3)) ]] && iter=$((needed + 3))
   echo "▶ prep     seeding $pool via $producer ITERATIONS=$iter"
   seed_run "$producer" "$iter"
-  POOL_FILE_PATH="data/worker-svc/trade/${pool}.json"
+  POOL_FILE_PATH="data/trade/${pool}.json"
   if grep -q 'TBC-' "$POOL_FILE_PATH" 2>/dev/null; then
     echo "ERROR: $pool still holds placeholders after seeding — harvest failed (environment reachable? contract drift?); prep aborted" >&2
     exit 1

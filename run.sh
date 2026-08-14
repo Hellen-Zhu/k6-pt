@@ -301,7 +301,7 @@ if grep -q 'PREFLIGHT FAILED' "$RUN_DIR/k6.log" 2>/dev/null; then
   echo ""
   echo "⚠ PREFLIGHT FAILED — the case pool failed local validation (placeholders / missing fields / empty pool); not a single request was sent."
   grep 'PREFLIGHT' "$RUN_DIR/k6.log" | tail -5
-  echo "  Fill in the data first: see data/worker-svc/trade/README.md"
+  echo "  Fill in the data first: see data/trade/README.md"
 fi
 
 # Exit code: a nonzero k6 exit (threshold abort / interruption / script error) wins;

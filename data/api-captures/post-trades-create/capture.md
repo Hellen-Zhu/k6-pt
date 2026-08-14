@@ -1,6 +1,6 @@
 # POST /api/v1/trades/create
 
-- **URL**: <WORKER_SVC_BASE>/api/v1/trades/create
+- **URL**: <GATEWAY_BASE>/api/v1/trades/create
 - **Method**: POST，**`multipart/form-data`**（不是 JSON body）
 - **Status**: 200
 - **Captured**: 2026-08-12（来源：Swagger UI 截图 IMG_3958）
@@ -14,7 +14,7 @@
 | part | 类型 | 内容 |
 |---|---|---|
 | `trade` | 文本（JSON 字符串） | 见 `payload-trade-field.json` |
-| `datFile` | 文件 | `0_instrument.dat`（按 productId 同名约定取，见 `pools/worker-svc/trade/create-case-pool.js`） |
+| `datFile` | 文件 | `0_instrument.dat`（按 productId 同名约定取，见 `pools/trade/create-case-pool.js`） |
 
 本次抓包的 `trade` 字段只带了 5 个 basic 字段（portfolioId / counterpartyFmId / counterpartyName / productId / direction），比脚本 `buildTradePayload()` 发的字段少——服务端会补默认值（响应里 currencyPair、dealDate、premium* 等都是服务端填的）。
 
@@ -31,7 +31,7 @@
 
 ## 业务断言（现有实现）
 
-`src/api/worker-svc/trade/create.js`：
+`src/api/trade/create.js`：
 - business：`code === 200 && status === 'PENDING APPROVAL'`
 - shape：`data.trade.id` 匹配 `/^TRD-[A-Za-z0-9]+$/`
 - `REJECT_PATTERNS` 有 `dat-missing`（并发上传同一时间戳临时文件互删）

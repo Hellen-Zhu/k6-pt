@@ -1,12 +1,12 @@
 import exec from 'k6/execution';
 import { cfg, buildOptions } from '../lib/bootstrap.js';
 import { pickUser } from '../lib/users.js';
-import { pickTradeId, tradeIdsPreflight } from '../pools/worker-svc/trade/trade-ids-pool.js';
-import { getRiskMetrics } from '../api/worker-svc/trade/risk-metrics.js';
+import { pickTradeId, tradeIdsPreflight } from '../pools/trade/trade-ids-pool.js';
+import { getRiskMetrics } from '../api/trade/risk-metrics.js';
 
-// P0 · worker-svc/trade · read path (risk metrics)
+// P0 · trade · read path (risk metrics)
 
-export const options = buildOptions('worker-svc/trade', 'riskMetrics');
+export const options = buildOptions('trade', 'riskMetrics');
 
 export function setup() {
   tradeIdsPreflight();

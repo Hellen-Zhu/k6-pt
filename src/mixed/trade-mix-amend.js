@@ -30,32 +30,32 @@ import { cfg, loadData, buildOptionsMulti, plannedIterations } from '../lib/boot
 import { splitByRatio } from '../lib/mix.js';
 import { pickUser } from '../lib/users.js';
 import { pickAt } from '../lib/data.js';
-import { pickCase } from '../pools/worker-svc/trade/create-case-pool.js';
-import { pickTradeId, tradeIdsPreflight } from '../pools/worker-svc/trade/trade-ids-pool.js';
-import { createTrade } from '../api/worker-svc/trade/create.js';
-import { updateTrade } from '../api/worker-svc/trade/update.js';
-import { approveTask } from '../api/worker-svc/checker-flow/tasks.js';
-import { queryTrades } from '../api/worker-svc/trade/query.js';
-import { getTrade } from '../api/worker-svc/trade/detail.js';
-import { loadPool, consumablePreflight, takeUnique } from '../pools/worker-svc/trade/consumable-pool.js';
-import { createTradePreflight } from '../pools/worker-svc/trade/create-trade-preflight.js';
+import { pickCase } from '../testdata/trade/create.js';
+import { pickTradeId, tradeIdsPreflight } from '../pools/trade/trade-ids-pool.js';
+import { createTrade } from '../api/trade/create.js';
+import { updateTrade } from '../api/trade/update.js';
+import { approveTask } from '../api/checker-flow/tasks.js';
+import { queryTrades } from '../api/trade/query.js';
+import { getTrade } from '../api/trade/detail.js';
+import { loadPool, consumablePreflight, takeUnique } from '../pools/trade/consumable-pool.js';
+import { createTradePreflight } from '../testdata/trade/create-preflight.js';
 
 // PLACEHOLDER ratios (must sum to 1) — update = 2 × create and approve = create + update are structural
 const MIX = { query: 0.25, detail: 0.15, create: 0.1, update: 0.2, approve: 0.3 };
 
-const QUERY_DATA = loadData('worker-svc/trade/trades-query');
-const UPDATE_DATA = loadData('worker-svc/trade/update-payload');
+const QUERY_DATA = loadData('trade/trades-query');
+const UPDATE_DATA = loadData('trade/update-payload');
 const UPDATE_CASES = UPDATE_DATA.cases.map((c, n) => Object.assign({ __row: n + 1 }, c));
 const UPDATE_POOL = loadPool('update-ids');
 const APPROVE_POOL = loadPool('approve-tasks');
 
 const base = buildOptionsMulti(
   [
-    ['worker-svc/trade', 'query'],
-    ['worker-svc/trade', 'detail'],
-    ['worker-svc/trade', 'create'],
-    ['worker-svc/trade', 'update'],
-    ['worker-svc/checker-flow', 'approve'],
+    ['trade', 'query'],
+    ['trade', 'detail'],
+    ['trade', 'create'],
+    ['trade', 'update'],
+    ['checker-flow', 'approve'],
   ],
   // Same empty-DB guard as the single-API query scenario
   { perf_trades_rows: ['avg>0'] },

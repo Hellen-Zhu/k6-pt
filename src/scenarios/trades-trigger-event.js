@@ -1,11 +1,11 @@
 import exec from 'k6/execution';
 import { cfg, buildOptions, plannedIterations } from '../lib/bootstrap.js';
 import { pickUser } from '../lib/users.js';
-import { loadPool, consumablePreflight, takeUnique } from '../pools/worker-svc/trade/consumable-pool.js';
-import { pickEventCase, eventCasesPreflight } from '../pools/worker-svc/trade/event-case-pool.js';
-import { triggerEvent } from '../api/worker-svc/trade/trigger-event.js';
+import { loadPool, consumablePreflight, takeUnique } from '../pools/trade/consumable-pool.js';
+import { pickEventCase, eventCasesPreflight } from '../testdata/trade/trigger-event.js';
+import { triggerEvent } from '../api/trade/trigger-event.js';
 
-// P0 · worker-svc/trade · write path (lifecycle events — consumes one LIVE id per request).
+// P0 · trade · write path (lifecycle events — consumes one LIVE id per request).
 // Internal tool per methodology: SLA line calibration / mixed-round attribution / regression
 // bisection; capacity conclusions come from trade-mix. Event templates (5 captured types)
 // rotate independently of the id cursor, so a round spreads evenly across event types; to
@@ -16,7 +16,7 @@ import { triggerEvent } from '../api/worker-svc/trade/trigger-event.js';
 
 const POOL = loadPool('event-ids');
 
-export const options = buildOptions('worker-svc/trade', 'triggerEvent');
+export const options = buildOptions('trade', 'triggerEvent');
 // Captured at init: k6 replaces the exported options binding with its consolidated version
 // after init, so reading options.scenarios inside setup() is not safe
 const PLANNED = plannedIterations(options);

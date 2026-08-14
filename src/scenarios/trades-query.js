@@ -2,14 +2,14 @@ import exec from 'k6/execution';
 import { cfg, loadData, buildOptions } from '../lib/bootstrap.js';
 import { pickUser } from '../lib/users.js';
 import { pickAt } from '../lib/data.js';
-import { queryTrades } from '../api/worker-svc/trade/query.js';
+import { queryTrades } from '../api/trade/query.js';
 
-// P0 · worker-svc/trade · read path
+// P0 · trade · read path
 
-const DATA = loadData('worker-svc/trade/trades-query');
+const DATA = loadData('trade/trades-query');
 
 // perf_trades_rows avg>0: empty-DB guard (query numbers against an empty DB are meaningless)
-export const options = buildOptions('worker-svc/trade', 'query', {
+export const options = buildOptions('trade', 'query', {
   perf_trades_rows: ['avg>0'],
 });
 

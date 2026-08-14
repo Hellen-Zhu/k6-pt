@@ -16,7 +16,7 @@ import { SharedArray } from 'k6/data';
 import exec from 'k6/execution';
 
 export const calcRiskPayloads = new SharedArray('calc-risk-payloads', () => {
-  const doc = JSON.parse(open(import.meta.resolve('../../../../data/worker-svc/trade/calc-risk-payloads.json')));
+  const doc = JSON.parse(open(import.meta.resolve('../../../data/trade/calc-risk-payloads.json')));
   return (doc.rows || []).map((r, n) => Object.assign({ __row: n + 1 }, r));
 });
 
@@ -34,7 +34,7 @@ export function calcRiskPayloadsPreflight() {
     if (!r.instrument || typeof r.instrument !== 'object') problems.push(`row ${r.__row}: instrument section missing`);
   });
   if (problems.length) {
-    console.error(`PREFLIGHT FAILED — calc-risk-payloads.json invalid: ${problems.join('; ')} (see data/worker-svc/trade/README.md)`);
+    console.error(`PREFLIGHT FAILED — calc-risk-payloads.json invalid: ${problems.join('; ')} (see data/trade/README.md)`);
     exec.test.abort('calc-risk payload pool failed local validation');
   }
 }

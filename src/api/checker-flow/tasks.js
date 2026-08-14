@@ -29,16 +29,15 @@
  * envelope — they classify as technical with the reason carrying the status code):
  *   http-403 = permission ("does not have CHECKER permission for product=... event=...") — an
  *     identity-pool configuration problem, not a performance signal; note permission is
- *     PER-PRODUCT, so checker accounts must cover every productId in the case pool.
+ *     PER-PRODUCT, so checker accounts must cover every productId in the create testdata rows.
  *   http-400 = state conflict ("Task ... is not PENDING (current: APPROVED)") — the write-path
  *     analog of the read pools' http-404: a consumed/stale pool, re-seed first. The consumable
  *     pool's exactly-once cursor exists precisely so a run never self-inflicts these.
  * (The earlier 409-for-permission assumption is dead; 409 has not been observed on this system.)
  */
-import * as client from '../../../lib/http.js';
-import { classifyResponse, reasonFrom } from '../../../lib/errors.js';
+import * as client from '../../lib/http.js';
+import { classifyResponse, reasonFrom } from '../../lib/errors.js';
 
-const SVC = 'worker-svc';
 const MOD = 'checker-flow';
 
 /*
@@ -55,7 +54,7 @@ export function extractTaskId(msg) {
 const REJECT_PATTERNS = [];
 
 function taskAction(cfg, action, taskId, user, runPhase) {
-  const { res, tags } = client.postEmpty(cfg, SVC, `/api/v1/checker/tasks/${taskId}/${action}`, {
+  const { res, tags } = client.postEmpty(cfg, `/api/v1/checker/tasks/${taskId}/${action}`, {
     // Normalized name tag — the raw URL carries a unique taskId and must never become a tag value
     name: `POST /api/v1/checker/tasks/{taskId}/${action}`, module: MOD, user,
     tags: { runPhase: runPhase || 'main' },

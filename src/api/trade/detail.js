@@ -1,7 +1,6 @@
-import * as client from '../../../lib/http.js';
-import { classifyRead } from '../../../lib/errors.js';
+import * as client from '../../lib/http.js';
+import { classifyRead } from '../../lib/errors.js';
 
-const SVC = 'worker-svc';
 const MOD = 'trade';
 
 /*
@@ -11,7 +10,7 @@ const MOD = 'trade';
  * data.trade and echoes the id back unchanged.
  */
 export function getTrade(cfg, id, user) {
-  const { res, tags } = client.get(cfg, SVC, `/api/v1/trades/${encodeURIComponent(id)}`, {
+  const { res, tags } = client.get(cfg, `/api/v1/trades/${encodeURIComponent(id)}`, {
     name: 'GET /api/v1/trades/{id}', module: MOD, user,
   });
   return classifyRead(res, tags, (body) => {

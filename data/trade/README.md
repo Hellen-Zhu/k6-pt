@@ -1,4 +1,4 @@
-# worker-svc / trade data files
+# trade data files
 
 - `trades-query.json` — query field pool: `{ filters: [...] }`. Fields have no validity coupling between them; rotate freely within the pool.
 - `trades-create.json` — create case pool: one row = one complete runnable case. The row number `__row` is injected automatically at load time
@@ -12,7 +12,7 @@
   seeds it — then it survives measurement rounds indefinitely. Re-seed only after poisoning (a failed reject leg leaves an id
   stuck pending; revisits then show as a wall of **http-409** on update).
 
-The read-path client (`src/api/worker-svc/trade/query.js`) and the write-path client (`create.js`) are separate code,
+The read-path client (`src/api/trade/query.js`) and the write-path client (`create.js`) are separate code,
 because read scenarios should not load the create case pool or the dat binaries — the two never import each other.
 
 ## Why ownership fields are embedded per row, and must be same-source
@@ -42,7 +42,7 @@ Record the capture time and source in the `note` field.
 ## Variant pools (controlled experiments)
 
 E.g. portfolio-level lock contention: copy `trades-create.json` as a variant (fill every row with the same ownership group), then switch via the
-`CREATE_DATA_FILE=data/worker-svc/trade/<variant>.json` override — no script changes.
+`CREATE_DATA_FILE=data/trade/<variant>.json` override — no script changes.
 
 ⚠ Captured curl/response samples go in `_samples/` in this directory (already gitignored) — DevTools exports contain session
 cookies and real business data; **they must never enter the repo**.

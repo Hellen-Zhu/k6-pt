@@ -36,12 +36,13 @@ No dependencies beyond k6 (no Node/jq/python); the summary is written to disk di
 ## Directory layout
 
 - `config/environments/` environments (single gateway endpoint `gatewayUrl` — every service sits behind it; allowlist, promRwUrl, grafanaDashboard, identity pools); **everything in the repo is localhost/example placeholders — real values are filled in only in the private copy; there is no prod entry and none is allowed**
-- `config/slas/` API-level percentile SLAs organized by service/module (attached to perf_success_duration; error rate and abort thresholds/breakers are profile-level)
+- `config/slas/` API-level percentile SLAs organized by module (attached to perf_success_duration; error rate and abort thresholds/breakers are profile-level)
 - `profiles/` load profiles (declarative JSON; the scenario block is verbatim k6 executor config; keys starting with `_` are comments; seven profiles — smoke/baseline/load/ladder/stress/spike/soak — methodology in each file's description)
-- `data/<service>/<module>/` per-API dedicated data: query field pools + create case pools (one line = one complete same-origin case; discipline in `data/worker-svc/trade/README.md`); `data/datfiles/products/<productType>/` dat samples (placeholders, must be replaced with real captures)
+- `data/<module>/` per-API dedicated data: query field pools + create row files (one line = one complete same-origin row; discipline in `data/trade/README.md`); `data/datfiles/products/<productType>/` dat samples (placeholders, must be replaced with real captures)
 - `src/lib` pure-logic modules (config/users/data/rows/sla/report, loadable in Node) + k6-side modules (http.js pure send pipeline, errors.js three-class engine, bootstrap.js scenario assembly + handleSummary dual-channel output)
-- `src/api/<service>/<module>/` API client layer: `<api>.js` (request construction + response contract classification) + `<api>-data.js` for APIs that need a case pool — one file per API, naturally isolated in the init graph; created on demand (only when an API is actually load-tested)
-- `src/pools/<service>/<module>/` data-supply layer: parameter pools (reusable rotation), consumable pools (exactly-once cursor), the permanent cycle pool, and the setup-phase preflights (no requests sent during setup)
+- `src/api/<module>/` API client layer: `<api>.js` (request construction + response contract classification) — one file per API, created on demand (only when an API is actually load-tested)
+- `src/testdata/<module>/` request-shape datasets, same-basename pairing with the api client: row loading (SharedArray) + rotation + row validation + dat preloading; never seeded, never depleted
+- `src/pools/<module>/` id pools (server-state references): the consumable exactly-once cursor, the permanent cycle pool and the reusable read rotation, plus their setup-phase preflights (no requests sent during setup)
 - `src/scenarios` single-API entry points (data + one business action); `src/mixed` mixed-workload entries (self-contained flow tables); `src/seed` seed producers (run via ./prep.sh only)
 - `scripts/` single-purpose helpers dispatched by the two commands (seed-harvest.sh, http-capture.sh)
 - `dashboards/` Grafana dashboard JSON (single-board overview + pinned-version archive of official 19665)
@@ -53,7 +54,7 @@ No dependencies beyond k6 (no Node/jq/python); the summary is written to disk di
 - **Three-class error split**: technical (the performance conclusion) / business (usually a data problem) / script (invalidates the run) must be examined separately; SLA percentiles look only at `perf_success_duration` (business-successful requests)
 - The verdict authority is the summary (three-class + thresholds + zero-request false-green guard), not dashboard.html — the web dashboard's error rate is the HTTP-layer http_req_failed, and this system returns 200 even on business failures
 - Data selection always uses the global cursor (`exec.scenario.iterationInTest`); metric tags may only take bounded values — unique values like tradeId are strictly forbidden
-- Adding a write-path API: under `src/api/<service>/<module>/` add `<api>.js` (contract) + `<api>-data.js` (case pool) + a `data/<service>/<module>/<scenario>.json` case file + preflight; adding a read-path API: add `<api>.js` using `classifyRead` + a field-pool data file
+- Adding a write-path API: add `src/api/<module>/<api>.js` (contract) + `src/testdata/<module>/<api>.js` (row loading/validation) + a `data/<module>/*.json` row file; adding a read-path API: add `<api>.js` using `classifyRead` + a field-pool data file
 - RATE/VUS/DURATION/MAX_VUS overrides apply only to same-named scalar keys that exist in the profile (stages literals are untouched); any `KEY=value` passes through as k6 `-e`
 
 ## Enabling real environments

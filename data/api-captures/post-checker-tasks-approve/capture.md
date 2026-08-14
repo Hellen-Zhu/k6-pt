@@ -1,6 +1,6 @@
 # POST /api/v1/checker/tasks/{taskId}/approve
 
-- **URL**: <WORKER_SVC_BASE>/api/v1/checker/tasks/CHK-17865078801556298D6B6/approve
+- **URL**: <GATEWAY_BASE>/api/v1/checker/tasks/CHK-17865078801556298D6B6/approve
 - **Method**: POST，**空 body**（`-d ''`，但仍带 `Content-Type: application/json`）
 - **Status**: 200
 - **Captured**: 2026-08-12（来源：Swagger UI 截图 IMG_3961 + IMG_3965，两张衔接成完整的 `basic`）
@@ -29,7 +29,7 @@
 
 ## 业务断言（现有实现）
 
-`src/api/worker-svc/checker-flow/tasks.js`：
+`src/api/checker-flow/tasks.js`：
 - business：`code === 200 && status === 'SUCCESS'`
 - shape：`data.id` 匹配 `/^TRD-[A-Za-z0-9]+$/`
 
@@ -54,7 +54,7 @@
 
 这是压测不是功能测试，断言只需要回答"请求有没有被服务端挡住"，信封（`code === 200 && status === 'SUCCESS'`）就够了。状态机落到哪一格属于功能覆盖，不在这里做。
 
-`src/api/worker-svc/checker-flow/tasks.js` 的断言保持原样：
+`src/api/checker-flow/tasks.js` 的断言保持原样：
 - business：`code === 200 && status === 'SUCCESS'`
 - shape：`data.id` 匹配 `/^TRD-[A-Za-z0-9]+$/`
 

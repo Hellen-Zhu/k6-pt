@@ -26,27 +26,27 @@ import { cfg, loadData, buildOptionsMulti, plannedIterations } from '../lib/boot
 import { splitByRatio } from '../lib/mix.js';
 import { pickUser } from '../lib/users.js';
 import { pickAt } from '../lib/data.js';
-import { pickCase } from '../pools/worker-svc/trade/create-case-pool.js';
-import { pickTradeId, tradeIdsPreflight } from '../pools/worker-svc/trade/trade-ids-pool.js';
-import { createTrade } from '../api/worker-svc/trade/create.js';
-import { approveTask } from '../api/worker-svc/checker-flow/tasks.js';
-import { queryTrades } from '../api/worker-svc/trade/query.js';
-import { getTrade } from '../api/worker-svc/trade/detail.js';
-import { loadPool, consumablePreflight, takeUnique } from '../pools/worker-svc/trade/consumable-pool.js';
-import { createTradePreflight } from '../pools/worker-svc/trade/create-trade-preflight.js';
+import { pickCase } from '../testdata/trade/create.js';
+import { pickTradeId, tradeIdsPreflight } from '../pools/trade/trade-ids-pool.js';
+import { createTrade } from '../api/trade/create.js';
+import { approveTask } from '../api/checker-flow/tasks.js';
+import { queryTrades } from '../api/trade/query.js';
+import { getTrade } from '../api/trade/detail.js';
+import { loadPool, consumablePreflight, takeUnique } from '../pools/trade/consumable-pool.js';
+import { createTradePreflight } from '../testdata/trade/create-preflight.js';
 
 // PLACEHOLDER ratios (must sum to 1) — approve = create is structural
 const MIX = { query: 0.4, detail: 0.2, create: 0.2, approve: 0.2 };
 
-const QUERY_DATA = loadData('worker-svc/trade/trades-query');
+const QUERY_DATA = loadData('trade/trades-query');
 const APPROVE_POOL = loadPool('approve-tasks');
 
 const base = buildOptionsMulti(
   [
-    ['worker-svc/trade', 'query'],
-    ['worker-svc/trade', 'detail'],
-    ['worker-svc/trade', 'create'],
-    ['worker-svc/checker-flow', 'approve'],
+    ['trade', 'query'],
+    ['trade', 'detail'],
+    ['trade', 'create'],
+    ['checker-flow', 'approve'],
   ],
   // Same empty-DB guard as the single-API query scenario
   { perf_trades_rows: ['avg>0'] },
