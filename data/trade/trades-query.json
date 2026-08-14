@@ -1,8 +1,34 @@
 {
-  "filters": [
-    { "status": "LIVE" },
-    { "status": "PENDING" },
-    { "counterpartyFmId": "CP-000001" },
-    {}
+  "_comment": [
+    "Blotter-query payload rows for the trades-query scenario and every mixed queryMix flow.",
+    "Contract 2026-08-14 (data/api-captures/post-blotter-trades/): POST /api/v1/blotter/trades.",
+    "One row = one COMPLETE blotterDetails payload, captured VERBATIM from the UI/Swagger —",
+    "hand-assembled blotters risk measuring the error path, same discipline as calc-risk rows.",
+    "Condition values may use SERVER-side tokens (CURRENT_DATE here) — resolved per request by",
+    "the server, so rows stay evergreen; do NOT use this repo's client-side {{TODAY}} tokens.",
+    "BLT-* / c-* ids are synthetic contract identifiers, kept verbatim. Only the blotterDetails",
+    "key reaches the wire (query.js builds the body from it; loader bookkeeping never leaks).",
+    "Row count buys blotter-shape diversity — capture more variants from the UI to widen it."
+  ],
+  "rows": [
+    {
+      "blotterDetails": [
+        {
+          "id": "BLT-DEFAULT-NEW-TODAY",
+          "name": "New Today",
+          "columns": ["id", "trade.basic.productId", "trade.basic.portfolioId", "trade.basic.counterpartyName"],
+          "conditions": [
+            {
+              "id": "c-default-new-today-deal-date",
+              "field": "trade.basic.dealDate",
+              "operator": "=",
+              "value": "CURRENT_DATE",
+              "logicOperator": "AND"
+            }
+          ],
+          "sort": { "field": "trade.basic.dealDate", "direction": "desc" }
+        }
+      ]
+    }
   ]
 }

@@ -44,6 +44,7 @@ import { createTradePreflight } from '../testdata/trade/create-preflight.js';
 const MIX = { query: 0.25, detail: 0.15, create: 0.1, update: 0.2, approve: 0.3 };
 
 const QUERY_DATA = loadData('trade/trades-query');
+const QUERY_ROWS = QUERY_DATA.rows.map((r, n) => Object.assign({ __row: n + 1 }, r));
 const UPDATE_DATA = loadData('trade/update-payload');
 const UPDATE_CASES = UPDATE_DATA.cases.map((c, n) => Object.assign({ __row: n + 1 }, c));
 const UPDATE_POOL = loadPool('update-ids');
@@ -92,7 +93,7 @@ export function setup() {
 
 export function queryMix() {
   const i = exec.scenario.iterationInTest;
-  queryTrades(cfg, pickAt(QUERY_DATA.filters, i), pickUser(cfg, 'maker', __VU));
+  queryTrades(cfg, pickAt(QUERY_ROWS, i), pickUser(cfg, 'maker', __VU));
 }
 
 export function detailMix() {

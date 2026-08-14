@@ -4,7 +4,7 @@
  * entry runs with ZERO consumable pools (prep per round is retired for this entry).
  *
  *   flow          share  req/iter  iteration body (strictly serial inside — business causality)
- *   query          .25      1      GET /trades
+ *   query          .25      1      POST /blotter/trades (blotter query)
  *   detail         .10      1      GET /trades/{id}            (trade-ids reusable read pool)
  *   create-chain   .10      2      create → approve            (fresh trade, then abandoned LIVE)
  *   event-chain    .15      3      create → approve → trigger-event
@@ -38,8 +38,9 @@
  *    experiences — are exact; per-trade chronology is not modeled.
  *  - The event chain's Cancellation rows leave PENDING checker tasks behind on purpose
  *    (nobody processes them): free padding for the otherwise near-empty checker queue.
- *  - Novation/Allocation events spawn child trades and GET /trades has no pagination —
- *    sustained rounds grow the query response; account for it in cross-round comparisons.
+ *  - Novation/Allocation events spawn child trades, and the blotter query's default row filters
+ *    dealDate = CURRENT_DATE — mix-created trades are all same-day, so sustained rounds still
+ *    grow the query response; account for it in cross-round comparisons.
  *
  * Entries are deliberately SELF-CONTAINED (no shared flow module): read one file, see the
  * whole scenario. Sister entries (trade-mix-book / trade-mix-amend) still run the pool-fed
@@ -68,6 +69,7 @@ import { triggerEvent } from '../api/trade/trigger-event.js';
 const MIX = { query: 0.25, detail: 0.1, createChain: 0.1, eventChain: 0.15, amendCycle: 0.4 };
 
 const QUERY_DATA = loadData('trade/trades-query');
+const QUERY_ROWS = QUERY_DATA.rows.map((r, n) => Object.assign({ __row: n + 1 }, r));
 const UPDATE_DATA = loadData('trade/update-payload');
 const UPDATE_CASES = UPDATE_DATA.cases.map((c, n) => Object.assign({ __row: n + 1 }, c));
 const CYCLE_POOL = loadCyclePool('amend-cycle-ids');
@@ -142,7 +144,7 @@ export function setup() {
 
 export function queryMix() {
   const i = exec.scenario.iterationInTest;
-  queryTrades(cfg, pickAt(QUERY_DATA.filters, i), pickUser(cfg, 'maker', __VU));
+  queryTrades(cfg, pickAt(QUERY_ROWS, i), pickUser(cfg, 'maker', __VU));
 }
 
 export function detailMix() {

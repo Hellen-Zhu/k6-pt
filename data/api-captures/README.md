@@ -68,7 +68,8 @@ k6 侧对应实现：`src/lib/users.js` 的 `pickUser(cfg, role, vu)` 按角色�
 
 | API | Method | 说明 |
 |---|---|---|
-| [get-trades](get-trades/) | GET | trade 列表；返回字段是投影（12 字段），无分页参数 |
+| [get-trades](get-trades/) | GET | **已退役**（2026-08-14 由 post-blotter-trades 取代）；保留作历史证据 |
+| [post-blotter-trades](post-blotter-trades/) | POST | trade 列表（blotter 查询）；响应按 blotter id 分组，条件支持服务端 token `CURRENT_DATE` |
 | [post-checker-tasks-approve](post-checker-tasks-approve/) | POST | 审批通过；空 body，checker 身份，`data.{id,basic}` |
 | [post-checker-tasks-reject](post-checker-tasks-reject/) | POST | 驳回；与 approve 同构，**无需 reason payload** |
 | [post-trades-create](post-trades-create/) | POST | 建 trade；**multipart**（trade JSON + datFile），响应 `data.trade.{id,basic}` |

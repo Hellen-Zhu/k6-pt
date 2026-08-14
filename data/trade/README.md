@@ -4,7 +4,7 @@
 - `trades-create.json` — create case pool: one row = one complete runnable case. The row number `__row` is injected automatically at load time
   and serves as a metric tag (a bad data row can be sliced out directly from the metrics); there is no manually maintained id column.
 - `trade-ids.json` — trade ID pool: `{ ids: [...] }`, shared by the detail and risk-metrics scenarios.
-  Capture: run one `GET /api/v1/trades` query (or copy from the UI) and fill in trade ids from the **dedicated PERF portfolio**;
+  Capture: run one blotter query (`POST /api/v1/blotter/trades`, or copy from the UI) and fill in trade ids from the **dedicated PERF portfolio**;
   IDs go stale with the environment — re-capture when switching environments. Placeholders are intercepted by the setup-phase preflight.
   ⚠ Expired IDs show up as **http-404 falling into the technical class** — if you see a wall of http-404, re-capture the IDs first; do not treat it as a performance problem.
 - `amend-cycle-ids.json` — PERMANENT cycle pool for trade-mix-full's amend chain (update → reject; reject discards the

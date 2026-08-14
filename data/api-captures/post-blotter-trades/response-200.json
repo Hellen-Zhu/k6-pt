@@ -1,0 +1,37 @@
+{
+  "__truncated": "截图只拍到第 1 个 blotter 的第 1 行、trade.basic 到 marketers[0].marketerId 为止。data 下除 blotter id 外是否有兄弟字段、blotter 内除 data 外是否有分页/计数字段均未知。",
+  "code": 200,
+  "status": "SUCCESS",
+  "msg": "",
+  "data": {
+    "BLT-DEFAULT-NEW-TODAY": {
+      "data": [
+        {
+          "trade": {
+            "id": "TRD-178667491553897C960FD",
+            "basic": {
+              "__truncated": "字段按字母序，拍到 marketers 为止；其余字段未入镜",
+              "breakClause": "false",
+              "ci": 0,
+              "counterpartyFmId": "10000001",
+              "counterpartyName": "PERF CP A",
+              "currencyPair": "USDJPY",
+              "cva": 0,
+              "dealDate": "2026-08-14",
+              "direction": "Buy",
+              "esgLinked": false,
+              "eventStatus": "New",
+              "excludeFromCsa": false,
+              "fva": 0,
+              "hardMargin": 0,
+              "iaCcy": "USD",
+              "marketers": [
+                { "marketerId": "system" }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  }
+}

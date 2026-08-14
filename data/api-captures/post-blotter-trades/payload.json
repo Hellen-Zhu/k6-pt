@@ -1,0 +1,19 @@
+{
+  "blotterDetails": [
+    {
+      "id": "BLT-DEFAULT-NEW-TODAY",
+      "name": "New Today",
+      "columns": ["id", "trade.basic.productId", "trade.basic.portfolioId", "trade.basic.counterpartyName"],
+      "conditions": [
+        {
+          "id": "c-default-new-today-deal-date",
+          "field": "trade.basic.dealDate",
+          "operator": "=",
+          "value": "CURRENT_DATE",
+          "logicOperator": "AND"
+        }
+      ],
+      "sort": { "field": "trade.basic.dealDate", "direction": "desc" }
+    }
+  ]
+}

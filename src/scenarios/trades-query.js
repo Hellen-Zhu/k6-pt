@@ -7,15 +7,18 @@ import { queryTrades } from '../api/trade/query.js';
 // P0 · trade · read path
 
 const DATA = loadData('trade/trades-query');
+const ROWS = DATA.rows.map((r, n) => Object.assign({ __row: n + 1 }, r));
 
-// perf_trades_rows avg>0: empty-DB guard (query numbers against an empty DB are meaningless)
+// perf_trades_rows avg>0: empty-DB guard. The default blotter row filters dealDate =
+// CURRENT_DATE, so "empty" means "no same-day trades" — book some (seed or UI) before a
+// standalone round, or the guard trips by design.
 export const options = buildOptions('trade', 'query', {
   perf_trades_rows: ['avg>0'],
 });
 
 export default function () {
   const i = exec.scenario.iterationInTest;
-  queryTrades(cfg, pickAt(DATA.filters, i), pickUser(cfg, 'maker', __VU));
+  queryTrades(cfg, pickAt(ROWS, i), pickUser(cfg, 'maker', __VU));
 }
 
 export { stdHandleSummary as handleSummary } from '../lib/bootstrap.js';

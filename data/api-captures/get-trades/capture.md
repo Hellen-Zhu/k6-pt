@@ -1,5 +1,7 @@
 # GET /api/v1/trades
 
+> ⚠ **已退役（2026-08-14）**：本接口由 `POST /api/v1/blotter/trades` 取代（见 [../post-blotter-trades/](../post-blotter-trades/)）。本记录保留作历史证据。
+
 - **URL**: <GATEWAY_BASE>/api/v1/trades
 - **Method**: GET（本次抓包无 query 参数，全量列表）
 - **Status**: 200
