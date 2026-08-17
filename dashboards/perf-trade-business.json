@@ -1433,6 +1433,219 @@
           }
         ]
       }
+    },
+    {
+      "id": 23,
+      "type": "table",
+      "title": "Requests by URL",
+      "description": "Ported from official 19665 (panel 17) + a requests count column. ⚠ Durations here are HTTP-layer http_req_duration over ALL requests — business failures (HTTP 200, code!=200) included, and trend stats are per-push-window aggregates (mean of windowed p95 ≈ overall p95, approximate). The verdict-caliber latency is perf_success_duration in the panel above.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 44
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "sum by(name, method, status) (k6_http_reqs_total{testid=~\"$testid\"})",
+          "legendFormat": "requests",
+          "format": "table",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "avg by(name, method, status) (k6_http_req_duration_min{testid=~\"$testid\"})",
+          "legendFormat": "min",
+          "format": "table",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "avg by(name, method, status) (k6_http_req_duration_p95{testid=~\"$testid\"})",
+          "legendFormat": "p95",
+          "format": "table",
+          "refId": "D"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "avg by(name, method, status) (k6_http_req_duration_p99{testid=~\"$testid\"})",
+          "legendFormat": "p99",
+          "format": "table",
+          "refId": "E"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "avg by(name, method, status) (k6_http_req_duration_max{testid=~\"$testid\"})",
+          "legendFormat": "max",
+          "format": "table",
+          "refId": "C"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "groupBy",
+          "options": {
+            "fields": {
+              "name": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "method": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "status": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "Value #A": {
+                "aggregations": [
+                  "max"
+                ],
+                "operation": "aggregate"
+              },
+              "Value #B": {
+                "aggregations": [
+                  "min"
+                ],
+                "operation": "aggregate"
+              },
+              "Value #D": {
+                "aggregations": [
+                  "mean"
+                ],
+                "operation": "aggregate"
+              },
+              "Value #E": {
+                "aggregations": [
+                  "mean"
+                ],
+                "operation": "aggregate"
+              },
+              "Value #C": {
+                "aggregations": [
+                  "max"
+                ],
+                "operation": "aggregate"
+              }
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "indexByName": {
+              "name": 0,
+              "method": 1,
+              "status": 2,
+              "Value #A (max)": 3,
+              "Value #B (min)": 4,
+              "Value #D (mean)": 5,
+              "Value #E (mean)": 6,
+              "Value #C (max)": 7
+            },
+            "renameByName": {
+              "Value #A": "requests",
+              "Value #A (max)": "requests",
+              "Value #B": "min",
+              "Value #B (min)": "min",
+              "Value #D": "p95",
+              "Value #D (mean)": "p95",
+              "Value #E": "p99",
+              "Value #E (mean)": "p99",
+              "Value #C": "max",
+              "Value #C (max)": "max"
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "decimals": 1,
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": false
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "requests"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "name"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 340
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "sortBy": [
+          {
+            "displayName": "requests",
+            "desc": true
+          }
+        ],
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "countRows": false,
+          "fields": ""
+        }
+      }
     }
   ],
   "refresh": "10s"
