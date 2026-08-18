@@ -39,9 +39,12 @@ Windows 侧实体化过的文件会丢执行位,git 检出还可能带 CRLF 行�
 ```bash
 cd <部署目录>
 chmod +x run.sh prep.sh scripts/*.sh
-file run.sh                                        # 显示 CRLF 即中招,执行下一行
+file run.sh                                        # 显示 CRLF 即中招,执行下两行
 sed -i 's/\r$//' run.sh prep.sh scripts/*.sh       # 只需修 .sh;js/json 不受影响
+sed -i 's/\r$//' ~/bin/k6                          # 垫片已按 §2 装过的话,装出去的副本一并修
 ```
+
+**警告**:绝不要对 `data/datfiles/` 下的二进制 .dat 样本跑 sed/dos2unix——改一个字节就废。
 
 zip 解压是否完成的判据:输出滚完回到提示符,`echo $?` 为 0;
 完备性核对 `unzip -l <包>.zip | tail -1` 的文件数与 `find <目录> -type f | wc -l` 一致。
@@ -114,7 +117,7 @@ k6 inspect -e ENV=dev src/scenarios/trades-query.js    # 脚本+配置静态装�
 | `k6: command not found` | 垫片未安装或 `~/bin` 不在 PATH → 重做第 2、3 步,`which k6` 验证 |
 | `K6_IMAGE: set K6_IMAGE to...` | 环境变量未设置 → 第 3 步;新开 shell 记得 `source ~/.bashrc` |
 | 启动时报镜像拉取/解析失败 | `K6_IMAGE` 与 `podman images` 里的引用不一致 → 逐字核对 |
-| `bad interpreter` / 诡异语法错 | CRLF 行尾 → 第 1 步路线二的 `sed` 补针,或改走 bundle 路线 |
+| `/usr/bin/env: 'bash\r': No such file or directory`、`bad interpreter` 或诡异语法错 | CRLF 行尾(zip/Windows 中转带入,`\r` 是被显式打印的不可见回车)→ §1 路线二的两行 `sed` 补针(含 `~/bin/k6`),或改走 bundle 路线根治 |
 | `Permission denied` 执行 .sh | 执行位丢失 → `chmod +x` |
 | results 文件属主是一串数字 | 垫片被绕过或 keep-id 参数被改 → 确认走 `~/bin/k6` 原版垫片 |
 | TLS x509 证书错误 | `K6_INSECURE_SKIP_TLS_VERIFY` 未生效 → `echo` 检查,注意变量要在跑测的 shell 里 |
