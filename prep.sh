@@ -96,7 +96,9 @@ for dir in src/scenarios src/mixed; do
 done
 [[ -n "$SCENARIO_FILE" ]] || { echo "ERROR: scenario not found: ${SCENARIO}" >&2; exit 2; }
 
-PLAN_LOG="$(mktemp "${TMPDIR:-/tmp}/prep-plan.XXXXXX")"
+# In-tree on purpose: under a containerized k6 (podman shim) only $PWD is mounted,
+# so an out-of-tree log path would be written inside the container and die with it.
+PLAN_LOG="$(mktemp "$PWD/.prep-plan.XXXXXX")"
 echo "▶ prep     computing pool demand: $SCENARIO × $PROFILE ${RAW_OVERRIDES[*]:-}"
 k6 run --quiet --log-output "file=$PLAN_LOG" \
   -e ENV="$ENV_NAME" -e PROFILE="$PROFILE" -e PLAN=1 \

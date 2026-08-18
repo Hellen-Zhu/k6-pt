@@ -121,6 +121,7 @@ k6 inspect -e ENV=dev src/scenarios/trades-query.js    # 脚本+配置静态装�
 | `Permission denied` 执行 .sh | 执行位丢失 → `chmod +x` |
 | results 文件属主是一串数字 | 垫片被绕过或 keep-id 参数被改 → 确认走 `~/bin/k6` 原版垫片 |
 | TLS x509 证书错误 | `K6_INSECURE_SKIP_TLS_VERIFY` 未生效 → `echo` 检查,注意变量要在跑测的 shell 里 |
+| `PLAN dry-run produced no POOLPLAN lines` | 容器方式下框架脚本引用了挂载树($PWD)之外的路径(如 /tmp),文件随容器销毁 → 已修(prep.sh 计划日志改为树内路径);若复现,检查报错命令是否还有树外路径 |
 | 长轮跑一半会话被踢 | SSH 空闲自动登出策略 → `nohup ./run.sh ... > run.log 2>&1 &`,soak 必用 |
 
 ## 9. 纪律回顾(两条腿)
