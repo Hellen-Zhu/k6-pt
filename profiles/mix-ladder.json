@@ -1,49 +1,22 @@
 {
   "name": "mix-ladder",
-  "description": "Open-model TOTAL-rate ladder for mixed entries: stepped flow rate at FIXED ratios (5 -> 10 -> 20 -> 40 per second, 1m ramp + 3m plateau each) — locates the knee of the mixed shape, contention included. Stages are literals: RATE=/DURATION= do not apply; to change the shape edit this file or copy a variant.",
+  "description": "Open-model TOTAL-rate ladder for mixed entries: stepped flow rate at FIXED ratios — locates the knee of the mixed shape, contention included. PARAMETRIC (2026-08-19): the shape block below is the default; LADDER=/RAMP=/PLATEAU= regenerate the stages at init, so exploring a different ladder needs no file edit. Any such override marks the round VARIANT (effective config lands in summary.json; baseline comparison is skipped).",
   "_verdict": "Same doctrine as ladder.json: a measurement round, not a judgment round — apiSla:false, no strict verdict line; the lenient breaker protects the shared environment while still capturing post-knee data. Read each plateau from Grafana (manifest epochMillis brackets the windows); if 429s appear, the curve is valid only up to the last clean step.",
-  "_pools": "Pool demand = the pool-owning flow's INTEGRAL over all stages x 1.2 (plannedIterations integrates trapezoids, preflight enforces and prints the exact demand when short). trade-mix-full example (ratios .1/.2/.05 -> per-flow targets 1/1/2/4, 1/2/4/8, 1/1/1/2): integrals ~1800/3360/1140 -> pools >= 2160/4032/1368 (seed ITERATIONS ~2800/5300/1800 allows harvest loss). trade-mix-book/-amend split at their own ratios — trust the preflight numbers. Each iteration is ONE HTTP request, so top-step HTTP RPS ~= the summed rounded per-flow targets (~40 req/s).",
+  "_pools": "Pool demand = the pool-owning flow's INTEGRAL over the GENERATED stages x 1.2 — plannedIterations integrates whatever ladder is in effect, so prep math follows LADDER= automatically; trust the preflight numbers. Each iteration is ONE HTTP request, so top-step HTTP RPS ~= the top LADDER value.",
+  "_autoPools": "preAllocatedVUs/maxVUs 'auto' = top per-second rate x 0.84 / 2.2 (SLA-p95 floor / SLA-p99 envelope, x1.2 headroom, bottleneck-flow normalized — CAPACITY-TEST-PLAN.md appendix B; coefficients live in lib/bootstrap.js AUTO_VU and are bound to the current MIX ratios + SLAs). dropped/s > 0 therefore means: latency beyond the p99 SLA envelope.",
   "apiSla": false,
   "scenario": {
     "executor": "ramping-arrival-rate",
     "startRate": 0,
     "timeUnit": "1s",
-    "preAllocatedVUs": 40,
-    "maxVUs": 150,
-    "stages": [
-      {
-        "duration": "1m",
-        "target": 5
-      },
-      {
-        "duration": "3m",
-        "target": 5
-      },
-      {
-        "duration": "1m",
-        "target": 10
-      },
-      {
-        "duration": "3m",
-        "target": 10
-      },
-      {
-        "duration": "1m",
-        "target": 20
-      },
-      {
-        "duration": "3m",
-        "target": 20
-      },
-      {
-        "duration": "1m",
-        "target": 40
-      },
-      {
-        "duration": "3m",
-        "target": 40
-      }
-    ]
+    "preAllocatedVUs": "auto",
+    "maxVUs": "auto"
+  },
+  "shape": {
+    "type": "ladder",
+    "ladder": "5,10,20,40",
+    "ramp": "1m",
+    "plateau": "3m"
   },
   "thresholds": {
     "_circuitBreaker": "Breaker only: wholesale business rejection aborts after delayAbortEval; no verdict line — the knee is the deliverable, not PASS/FAIL.",

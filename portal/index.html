@@ -1,5 +1,6 @@
-<!-- k6-pt console frontend — P0 (read-only): catalog/rounds/health come from server.js;
-     launch is a CLI command composer until the P1 trigger lands. Self-contained, no deps. -->
+<!-- k6-pt console frontend — P1: real launch via POST /api/rounds (env lock enforced
+     server-side); measurement profiles expose LADDER/RAMP/PLATEAU shape params that
+     drive the plot live; VARIANT rounds are badged. Self-contained, no deps. -->
 <title>k6-pt Console</title>
 <style>
   :root{
@@ -97,6 +98,8 @@
   .r-id .sep{color:var(--ink-faint)}
   .r-sub{font-family:var(--mono); font-size:11px; color:var(--ink-soft); font-variant-numeric:tabular-nums; margin-top:2px}
   .r-sub .err-t{color:var(--fail)}
+  .vtag{color:var(--meas); font-weight:600; letter-spacing:.06em}
+  .btn-start:disabled{background:var(--line); color:var(--ink-faint); cursor:not-allowed}
   .r-links{display:flex; gap:10px; font-family:var(--mono); font-size:11.5px; white-space:nowrap}
   .r-links a{color:var(--signal); text-decoration:none}
   .r-links a:hover{text-decoration:underline}
@@ -123,7 +126,7 @@
 
 <main class="wrap">
   <section class="panel" aria-labelledby="lh">
-    <div class="eyebrow" id="lh">Launch <small>P0 composes the command — trigger lands in P1</small></div>
+    <div class="eyebrow" id="lh">Launch <small>runs ./run.sh on this box</small></div>
 
     <div class="field"><label for="scenario">Scenario</label><select id="scenario"></select><span></span></div>
     <div class="field"><label for="env">Environment</label><select id="env"></select><span class="envstate idle" id="envstate">—</span></div>
@@ -134,15 +137,21 @@
       <figcaption class="shape-cap"><span id="pdesc"></span><b id="pstat"></b></figcaption>
     </figure>
 
-    <div class="ovr">
+    <div class="ovr" id="shape-row" hidden>
+      <div class="o"><label for="sp-ladder">ladder</label><input id="sp-ladder" style="width:150px" placeholder="10,50,100,200"></div>
+      <div class="o"><label for="sp-ramp">ramp</label><input id="sp-ramp" placeholder="1m"></div>
+      <div class="o"><label for="sp-plateau">plateau</label><input id="sp-plateau" placeholder="5m"></div>
+    </div>
+    <div class="ovr" id="scalar-row">
       <div class="o"><label for="ovr-rate">rate</label><input id="ovr-rate" placeholder="profile"></div>
       <div class="o"><label for="ovr-dur">duration</label><input id="ovr-dur" placeholder="profile"></div>
       <div class="o"><label for="ovr-mvu">max_vus</label><input id="ovr-mvu" placeholder="profile"></div>
     </div>
-    <p class="ovr-note">Overrides touch scalar keys only — stages are literal, edit the profile to change a ladder.</p>
+    <p class="ovr-note" id="ovr-note">Any override marks the round VARIANT — recorded in summary, skipped by baseline comparison.</p>
 
     <div class="cmd" id="cmdline"></div>
-    <button class="btn-start" id="copy">Copy run command</button>
+    <button class="btn-start" id="start">Start round</button>
+    <button class="btn-prep" id="copy">Copy the equivalent CLI command instead</button>
     <p class="note" id="lock-note"></p>
   </section>
 
@@ -188,10 +197,39 @@ function shapeOf(sc) {
   return { unit: 'iter', start: 1, segs: [{ d: 60, t: 1 }], note: sc.iterations ? sc.iterations + ' iterations' : 'shape n/a' };
 }
 
+// Shape params (measurement profiles): empty input = profile default.
+function shapeParams(prof) {
+  return {
+    ladder: $('sp-ladder').value.trim() || prof.shape.ladder,
+    ramp: $('sp-ramp').value.trim() || prof.shape.ramp,
+    plateau: $('sp-plateau').value.trim() || prof.shape.plateau,
+  };
+}
+
 function renderPlot() {
   const prof = CAT.profiles.find((x) => x.name === $('profile').value);
   if (!prof) return;
-  const p = shapeOf(prof.scenario);
+  const parametric = !!prof.shape && !prof.locked;
+  $('shape-row').hidden = !parametric;
+  $('scalar-row').hidden = !!prof.locked;
+  if (parametric) {
+    $('sp-ladder').placeholder = prof.shape.ladder;
+    $('sp-ramp').placeholder = prof.shape.ramp;
+    $('sp-plateau').placeholder = prof.shape.plateau;
+  }
+  let p = null;
+  if (prof.shape) {
+    const sp = shapeParams(prof);
+    if (/^\d+(,\d+)*$/.test(sp.ladder)) {
+      const segs = [];
+      for (const t of sp.ladder.split(',').map(Number)) {
+        segs.push({ d: secs(sp.ramp) || 60, t });
+        segs.push({ d: secs(sp.plateau) || 300, t });
+      }
+      p = { unit: 'req/s', start: prof.scenario.startRate || 0, segs };
+    }
+  }
+  if (!p) p = shapeOf(prof.scenario);
   const W = 620, H = 190, L = 46, R = 14, T = 20, B = 26;
   const total = Math.max(p.segs.reduce((a, s) => a + s.d, 0), 1);
   const max = Math.max(p.start, ...p.segs.map((s) => s.t), 1);
@@ -220,29 +258,52 @@ function renderPlot() {
     <polyline points="${line}" fill="none" stroke="var(--signal)" stroke-width="2" stroke-linejoin="round"/>
     ${plateaus.map((a) => `<text x="${a.x}" y="${a.y - 6}" text-anchor="middle" font-family="var(--mono)" font-size="10" fill="var(--ink-soft)">${a.v}</text>`).join('')}`;
 
+  // "auto" pools: mirror lib/bootstrap.js AUTO_VU for display only (server side is the truth)
+  let poolTxt = '';
+  if (prof.scenario.preAllocatedVUs === 'auto') {
+    const top = Math.max(p.start, ...p.segs.map((s) => s.t), 1);
+    poolTxt = ` · pools ${Math.ceil(top * 0.84)}/${Math.ceil(top * 2.2)} auto`;
+  }
   $('pdesc').textContent = (prof.locked ? '🔒 ' : '') + prof.description;
-  $('pstat').textContent = p.note || `top ${max} ${p.unit} · ${fmtDur(total)}`;
+  $('pstat').textContent = (p.note || `top ${max} ${p.unit} · ${fmtDur(total)}`) + poolTxt;
   $('lock-note').textContent = prof.locked
     ? 'Locked profile — its parameters are part of the conclusion; changes go through a PR.'
     : (prof.kind === 'measurement' ? 'Measurement round — no PASS/FAIL, the knee is the deliverable.' : '');
   renderCmd();
 }
 
-/* ── command composer (P0 stand-in for the P1 trigger) ── */
+/* ── overrides & command composer ── */
+function gatherOverrides() {
+  const prof = CAT.profiles.find((x) => x.name === $('profile').value);
+  const o = {};
+  if (!prof || prof.locked) return o;
+  if ($('ovr-rate').value.trim()) o.RATE = $('ovr-rate').value.trim();
+  if ($('ovr-dur').value.trim()) o.DURATION = $('ovr-dur').value.trim();
+  if ($('ovr-mvu').value.trim()) o.MAX_VUS = $('ovr-mvu').value.trim();
+  if (prof.shape) {                       // send shape keys only when they differ from defaults
+    const sp = shapeParams(prof);
+    if (sp.ladder !== prof.shape.ladder) o.LADDER = sp.ladder;
+    if (sp.ramp !== prof.shape.ramp) o.RAMP = sp.ramp;
+    if (sp.plateau !== prof.shape.plateau) o.PLATEAU = sp.plateau;
+  }
+  return o;
+}
 function renderCmd() {
-  const o = [];
-  if ($('ovr-rate').value) o.push('RATE=' + $('ovr-rate').value.trim());
-  if ($('ovr-dur').value) o.push('DURATION=' + $('ovr-dur').value.trim());
-  if ($('ovr-mvu').value) o.push('MAX_VUS=' + $('ovr-mvu').value.trim());
+  const o = Object.entries(gatherOverrides()).map(([k, v]) => `${k}=${v}`);
   $('cmdline').textContent = ['./run.sh', $('scenario').value, $('env').value, $('profile').value, ...o].join(' ');
 }
 
-/* ── env lock (inferred from running rounds) ── */
+/* ── env lock: server locks + running rounds ── */
+let LOCKS = {};
 function renderEnvState() {
-  const busy = ROUNDS.some((r) => r.running && r.env === $('env').value);
+  const env = $('env').value;
+  const busy = !!LOCKS[env] || ROUNDS.some((r) => r.running && r.env === env);
   const st = $('envstate');
-  st.textContent = busy ? '▶ round in progress' : '● idle';
+  st.textContent = busy ? '▶ round in progress — locked' : '● idle';
   st.className = 'envstate ' + (busy ? 'busy' : 'idle');
+  const b = $('start');
+  b.disabled = busy;
+  b.textContent = busy ? `${env} is locked — round in progress` : `Start round on ${env}`;
 }
 
 /* ── rounds ── */
@@ -256,9 +317,10 @@ function renderRounds() {
   const rows = ROUNDS.filter((r) => FILTER === 'all' || r.env === FILTER);
   $('rounds').innerHTML = rows.map((r) => {
     const [label, cls] = badge(r);
-    const sub = r.running
+    const vtag = r.variant ? ' · <span class="vtag">VARIANT</span>' : '';
+    const sub = (r.running
       ? `started ${r.started} UTC`
-      : `${r.started} UTC · T <span class="${r.err[0] ? 'err-t' : ''}">${r.err[0]}</span> · B ${r.err[1]} · S ${r.err[2]}`;
+      : `${r.started} UTC · T <span class="${r.err[0] ? 'err-t' : ''}">${r.err[0]}</span> · B ${r.err[1]} · S ${r.err[2]}`) + vtag;
     const links = [
       ['report', 'report'], ['summary', 'text'], ['manifest', 'manifest'], ['log', 'log'],
     ].map(([l, f]) => `<a href="/api/rounds/${r.id}/${f}" target="_blank" rel="noopener">${l}</a>`)
@@ -290,10 +352,22 @@ function renderHealth(h) {
 
 /* ── init ── */
 function fill(sel, items) { $(sel).innerHTML = items.map((i) => `<option>${i}</option>`).join(''); }
+function toast(msg) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 4200);
+}
+async function refresh() {
+  try {
+    [ROUNDS, LOCKS] = await Promise.all([api('/api/rounds'), api('/api/locks')]);
+    renderRounds(); renderEnvState();
+  } catch {}
+}
 async function init() {
   try {
-    const [cat, rounds, health] = await Promise.all([api('/api/catalog'), api('/api/rounds'), api('/api/health')]);
-    CAT = cat; ROUNDS = rounds;
+    const [cat, rounds, locks, health] = await Promise.all(
+      [api('/api/catalog'), api('/api/rounds'), api('/api/locks'), api('/api/health')]);
+    CAT = cat; ROUNDS = rounds; LOCKS = locks;
     fill('scenario', CAT.scenarios);
     fill('env', CAT.envs);
     fill('profile', CAT.profiles.map((x) => x.name));
@@ -305,19 +379,32 @@ async function init() {
   }
 }
 setInterval(() => { const c = $('clock'); if (c) c.textContent = new Date().toISOString().slice(11, 19) + ' UTC'; }, 1000);
-setInterval(async () => {   // light refresh of the rounds list
-  try { ROUNDS = await api('/api/rounds'); renderRounds(); renderEnvState(); } catch {}
-}, 15000);
+setInterval(refresh, 15000);
 
-$('profile').addEventListener('change', renderPlot);
+$('profile').addEventListener('change', () => {
+  ['sp-ladder', 'sp-ramp', 'sp-plateau'].forEach((id) => { $(id).value = ''; });
+  renderPlot();
+});
 $('scenario').addEventListener('change', renderCmd);
 $('env').addEventListener('change', () => { renderCmd(); renderEnvState(); });
+['sp-ladder', 'sp-ramp', 'sp-plateau'].forEach((id) => $(id).addEventListener('input', renderPlot));
 ['ovr-rate', 'ovr-dur', 'ovr-mvu'].forEach((id) => $(id).addEventListener('input', renderCmd));
+
+$('start').addEventListener('click', async () => {
+  const body = { scenario: $('scenario').value, env: $('env').value, profile: $('profile').value, overrides: gatherOverrides() };
+  $('start').disabled = true;
+  try {
+    const r = await fetch('/api/rounds', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', ...HDR }, body: JSON.stringify(body),
+    });
+    const d = await r.json().catch(() => ({}));
+    toast(r.status === 202 ? `Round started on ${body.env} — run.sh takes it from here.` : (d.error || 'HTTP ' + r.status));
+  } catch (e) { toast('Launch failed: ' + e.message); }
+  setTimeout(refresh, 1500);
+});
 $('copy').addEventListener('click', async () => {
   try { await navigator.clipboard.writeText($('cmdline').textContent); } catch {}
-  const t = $('toast');
-  t.textContent = 'Command copied — paste it into the injector shell.';
-  t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 4000);
+  toast('Command copied — paste it into the injector shell.');
 });
 
 init();

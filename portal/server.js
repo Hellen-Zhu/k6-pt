@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /*
- * k6-pt console backend — P0 (read-only).
+ * k6-pt console backend — P1: read APIs + the launch trigger.
  * Runtime: Node >= 18, STANDARD LIBRARY ONLY. This is Node-JS, not k6-JS — never
- * import framework code (contract, DESIGN.md §1): spawn run.sh/prep.sh (from P1),
+ * import framework code (contract, DESIGN.md §1): spawn run.sh/prep.sh,
  * read results/, list catalog directories. Nothing else.
  *
  * Run:   node portal/server.js            then open http://127.0.0.1:8090
@@ -10,12 +10,17 @@
  *        PORTAL_PORT  port                (default 8090)
  *        PORTAL_TOKEN when set, /api/* requires header X-Auth-Token
  *        PERF_HOME    framework root      (default: parent of this file)
+ *
+ * Launch semantics: POST /api/rounds validates against the whitelists, takes the
+ * per-env lock (shared-env discipline: one round per env), then spawns run.sh
+ * detached — a portal restart never kills a running round; the lock self-heals
+ * via a pid liveness check. Every trigger appends a runs.jsonl audit line.
  */
 'use strict';
 const http = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
-const { execFileSync } = require('node:child_process');
+const { execFileSync, spawn } = require('node:child_process');
 
 const PERF_HOME = path.resolve(process.env.PERF_HOME || path.join(__dirname, '..'));
 const ADDR = process.env.PORTAL_ADDR || '127.0.0.1';
@@ -36,6 +41,15 @@ const RUN_FILES = {
 };
 
 const ID_RE = /^[A-Za-z0-9][A-Za-z0-9._-]*$/; // runId: no slashes, no leading dot
+
+// Override whitelists (DESIGN.md §3.1 guardrail #1). Scalars are always allowed on
+// non-locked profiles; shape keys only on measurement profiles that carry a shape block.
+const SCALAR_OVR = { RATE: /^\d{1,6}$/, DURATION: /^\d{1,4}(h|m|s)$/, VUS: /^\d{1,5}$/, MAX_VUS: /^\d{1,5}$/ };
+const SHAPE_OVR = { LADDER: /^\d{1,6}(,\d{1,6}){0,19}$/, RAMP: /^\d{1,4}(h|m|s)$/, PLATEAU: /^\d{1,4}(h|m|s)$/ };
+
+const LOCK_DIR = path.join(__dirname, '.locks');
+const LOG_DIR = path.join(__dirname, 'logs');
+const AUDIT_FILE = path.join(__dirname, 'runs.jsonl');
 
 /* ── helpers ─────────────────────────────────────────────── */
 const send = (res, code, body, type = 'application/json') => {
@@ -61,6 +75,8 @@ function catalog() {
       const name = f.slice(0, -5);
       const scenario = {};
       for (const [k, v] of Object.entries(p.scenario || {})) if (!k.startsWith('_')) scenario[k] = v;
+      const shape = {};
+      for (const [k, v] of Object.entries(p.shape || {})) if (!k.startsWith('_')) shape[k] = v;
       return {
         name,
         description: p.description || '',
@@ -68,6 +84,7 @@ function catalog() {
         kind: MEASUREMENT.has(name) ? 'measurement' : 'judgment',
         locked: LOCKED.has(name),
         scenario,
+        shape: p.shape ? shape : null,
       };
     })
     .filter(Boolean);
@@ -107,6 +124,7 @@ function rounds(envFilter, limit) {
         id, scenario, env, profile, started,
         running: !s,
         verdict: s ? s.verdict : 'RUN',
+        variant: s ? !!s.variant : false,
         err: s ? [s.errTechnical || 0, s.errBusiness || 0, s.errScript || 0] : null,
         requests: s ? s.requests : null,
         rps: s ? s.rps : null,
@@ -160,6 +178,88 @@ function health() {
   return { ok: checks.every((c) => c.ok), checks, utc: new Date().toISOString() };
 }
 
+/* ── env lock (one round per env — shared-environment discipline) ── */
+function lockInfo(env) {
+  try { return JSON.parse(fs.readFileSync(path.join(LOCK_DIR, env + '.lock'), 'utf8')); } catch { return null; }
+}
+function lockAlive(info) {
+  if (!info || !info.pid) return false;
+  try { process.kill(info.pid, 0); return true; } catch { return false; }
+}
+function acquireLock(env, meta) {
+  fs.mkdirSync(LOCK_DIR, { recursive: true });
+  const f = path.join(LOCK_DIR, env + '.lock');
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const fd = fs.openSync(f, 'wx');           // atomic create — the mutex
+      fs.writeSync(fd, JSON.stringify(meta)); fs.closeSync(fd);
+      return true;
+    } catch {
+      if (lockAlive(lockInfo(env))) return false; // held by a live run
+      try { fs.unlinkSync(f); } catch {}          // stale (dead pid) — break and retry
+    }
+  }
+  return false;
+}
+function releaseLock(env) { try { fs.unlinkSync(path.join(LOCK_DIR, env + '.lock')); } catch {} }
+function audit(entry) { try { fs.appendFileSync(AUDIT_FILE, JSON.stringify(entry) + '\n'); } catch {} }
+
+/* ── POST /api/rounds — validate, lock, spawn run.sh detached ── */
+function launch(req, res, body) {
+  const { scenario, env, profile } = body;
+  const overrides = body.overrides || {};
+  const cat = catalog();
+  if (!cat.scenarios.includes(scenario)) return json(res, 400, { error: `unknown scenario: ${scenario}` });
+  if (!cat.envs.includes(env)) return json(res, 400, { error: `unknown env: ${env}` });
+  const prof = cat.profiles.find((x) => x.name === profile);
+  if (!prof) return json(res, 400, { error: `unknown profile: ${profile}` });
+  if (prof.locked && Object.keys(overrides).length)
+    return json(res, 400, { error: 'locked profile accepts no overrides — its parameters are part of the conclusion' });
+
+  const args = [];
+  for (const [k, v] of Object.entries(overrides)) {
+    const rule = SCALAR_OVR[k] || (prof.kind === 'measurement' && prof.shape ? SHAPE_OVR[k] : undefined);
+    if (!rule) return json(res, 400, { error: `override not allowed here: ${k}` });
+    if (!rule.test(String(v))) return json(res, 400, { error: `bad value for ${k}: ${v}` });
+    args.push(`${k}=${v}`);
+  }
+
+  const who = String(req.headers['x-user'] || req.socket.remoteAddress || 'unknown');
+  const meta = { env, scenario, profile, overrides, who, startedUtc: new Date().toISOString() };
+  if (!acquireLock(env, meta))
+    return json(res, 409, { error: `${env} is locked — round in progress`, lock: lockInfo(env) });
+
+  fs.mkdirSync(LOG_DIR, { recursive: true });
+  const ts = meta.startedUtc.replace(/[-:T]/g, '').slice(0, 14);
+  const logFile = path.join(LOG_DIR, `${ts}_${scenario}_${env}_${profile}.log`);
+  let child;
+  try {
+    const out = fs.openSync(logFile, 'a');
+    child = spawn('./run.sh', [scenario, env, profile, ...args],
+      { cwd: PERF_HOME, detached: true, stdio: ['ignore', out, out] });
+    fs.closeSync(out);
+  } catch (e) {
+    releaseLock(env);
+    return json(res, 500, { error: String(e.message || e) });
+  }
+  meta.pid = child.pid;
+  try { fs.writeFileSync(path.join(LOCK_DIR, env + '.lock'), JSON.stringify(meta)); } catch {}
+  child.unref();
+  child.on('exit', (code) => {
+    releaseLock(env);
+    audit({ ...meta, event: 'finished', exitCode: code, endedUtc: new Date().toISOString() });
+  });
+  child.on('error', () => releaseLock(env));
+  audit({ ...meta, event: 'started' });
+  return json(res, 202, { started: true, pid: child.pid, log: path.basename(logFile) });
+}
+
+function readBody(req, cb) {
+  let buf = '';
+  req.on('data', (c) => { buf += c; if (buf.length > 16384) { req.destroy(); } });
+  req.on('end', () => { try { cb(null, JSON.parse(buf || '{}')); } catch { cb(new Error('bad JSON')); } });
+}
+
 /* ── router ──────────────────────────────────────────────── */
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, 'http://localhost');
@@ -167,12 +267,24 @@ const server = http.createServer((req, res) => {
 
   if (p.startsWith('/api/') && TOKEN && req.headers['x-auth-token'] !== TOKEN)
     return json(res, 401, { error: 'X-Auth-Token required' });
-  if (req.method !== 'GET') return json(res, 405, { error: 'P0 is read-only' });
+  if (req.method === 'POST') {
+    if (p !== '/api/rounds') return json(res, 405, { error: 'unknown POST route' });
+    return readBody(req, (err, body) => {
+      if (err) return json(res, 400, { error: err.message });
+      try { launch(req, res, body); } catch (e) { json(res, 500, { error: String(e.message || e) }); }
+    });
+  }
+  if (req.method !== 'GET') return json(res, 405, { error: 'method not allowed' });
 
   try {
     if (p === '/' ) return send(res, 200, fs.readFileSync(path.join(__dirname, 'index.html')), 'text/html; charset=utf-8');
     if (p === '/api/catalog') return json(res, 200, catalog());
     if (p === '/api/health')  return json(res, 200, health());
+    if (p === '/api/locks') {
+      const out = {};
+      for (const e of catalog().envs) { const i = lockInfo(e); out[e] = lockAlive(i) ? i : null; }
+      return json(res, 200, out);
+    }
     if (p === '/api/rounds')
       return json(res, 200, rounds(url.searchParams.get('env') || '', Number(url.searchParams.get('limit') || 100)));
 
@@ -190,4 +302,4 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(PORT, ADDR, () =>
-  console.log(`k6-pt console (P0 read-only) on http://${ADDR}:${PORT}  PERF_HOME=${PERF_HOME}${TOKEN ? '  [token auth on]' : ''}`));
+  console.log(`k6-pt console (P1) on http://${ADDR}:${PORT}  PERF_HOME=${PERF_HOME}${TOKEN ? '  [token auth on]' : ''}`));

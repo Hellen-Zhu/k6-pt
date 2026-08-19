@@ -36,6 +36,49 @@ const BASELINE = loadBaseline();
 
 const HARD_MAX_VUS = 500;
 
+// ── Shape expansion & effective-config record (portal/DESIGN.md §3) ─────────────
+// A measurement profile may carry a "shape" block instead of literal stages; the
+// generator turns its parameters into stages at init, and LADDER/RAMP/PLATEAU env
+// overrides regenerate them — so exploring a different ladder needs no file edit.
+// preAllocatedVUs/maxVUs:"auto" derive from the top per-second rate via the sizing
+// coefficients below (bound to the CURRENT mix ratios + SLAs; re-derive them per
+// CAPACITY-TEST-PLAN.md appendix B whenever either changes).
+const AUTO_VU = { pre: 0.84, max: 2.2 };
+
+// Captured at init, embedded into summary.json by stdHandleSummary. Any env-sourced
+// change flips `variant`: the round no longer matches the git-versioned profile, so
+// the baseline comparison is skipped and reporting surfaces a VARIANT mark.
+// (Module init re-runs identically in the handleSummary instance — same __ENV, same
+// files — so this record stays consistent across k6's separate runtime instances.)
+const EFFECTIVE = { overrides: {}, shape: null, scenario: null, variant: false };
+
+function expandShape(sc, shape) {
+  if (shape && shape.type === 'ladder') {
+    const ladder = __ENV.LADDER || shape.ladder;
+    const ramp = __ENV.RAMP || shape.ramp;
+    const plateau = __ENV.PLATEAU || shape.plateau;
+    if (!/^\d+(,\d+)*$/.test(ladder)) throw new Error(`LADDER must be a comma list of integers, got: ${ladder}`);
+    sc.stages = [];
+    for (const t of ladder.split(',').map((n) => parseInt(n, 10))) {
+      sc.stages.push({ duration: ramp, target: t });
+      sc.stages.push({ duration: plateau, target: t });
+    }
+    EFFECTIVE.shape = { type: 'ladder', ladder, ramp, plateau };
+    for (const k of ['LADDER', 'RAMP', 'PLATEAU']) {
+      if (__ENV[k]) { EFFECTIVE.overrides[k] = __ENV[k]; EFFECTIVE.variant = true; }
+    }
+  }
+  if (sc.preAllocatedVUs === 'auto' || sc.maxVUs === 'auto') {
+    const tu = durationSeconds(sc.timeUnit || '1s') || 1;
+    let top = (sc.startRate || 0) / tu;
+    if (sc.rate !== undefined) top = Math.max(top, sc.rate / tu);
+    for (const st of sc.stages || []) top = Math.max(top, st.target / tu);
+    if (sc.preAllocatedVUs === 'auto') sc.preAllocatedVUs = Math.ceil(top * AUTO_VU.pre);
+    if (sc.maxVUs === 'auto') sc.maxVUs = Math.ceil(top * AUTO_VU.max);
+  }
+  return sc;
+}
+
 // Each k6 run has exactly one environment: cfg is loaded once in the init phase and scenarios
 // import it directly.
 // The gateway URL is not exported here — scenarios never touch URLs; the api layer resolves it
@@ -70,17 +113,18 @@ function intEnv(key) {
 // (stages literals are unaffected by overrides; see each profile's _override comment); maxVUs
 // enforces a global hard cap, keeping a misconfiguration from knocking over a shared environment
 function applyOverrides(sc) {
+  const applied = (k, v) => { EFFECTIVE.overrides[k] = v; EFFECTIVE.variant = true; };
   const rate = intEnv('RATE');
   const vus = intEnv('VUS');
   const maxVUs = intEnv('MAX_VUS');
   const iterations = intEnv('ITERATIONS');
-  if (sc.rate !== undefined && rate !== undefined) sc.rate = rate;
-  if (sc.vus !== undefined && vus !== undefined) sc.vus = vus;
-  if (sc.duration !== undefined && __ENV.DURATION) sc.duration = __ENV.DURATION;
-  if (sc.iterations !== undefined && iterations !== undefined) sc.iterations = iterations;
+  if (sc.rate !== undefined && rate !== undefined) { sc.rate = rate; applied('RATE', rate); }
+  if (sc.vus !== undefined && vus !== undefined) { sc.vus = vus; applied('VUS', vus); }
+  if (sc.duration !== undefined && __ENV.DURATION) { sc.duration = __ENV.DURATION; applied('DURATION', __ENV.DURATION); }
+  if (sc.iterations !== undefined && iterations !== undefined) { sc.iterations = iterations; applied('ITERATIONS', iterations); }
   // shared-iterations refuses iterations < vus — shrink vus for small trial seeds (ITERATIONS=5)
   if (sc.iterations !== undefined && sc.vus !== undefined && sc.vus > sc.iterations) sc.vus = sc.iterations;
-  if (sc.maxVUs !== undefined && maxVUs !== undefined) sc.maxVUs = maxVUs;
+  if (sc.maxVUs !== undefined && maxVUs !== undefined) { sc.maxVUs = maxVUs; applied('MAX_VUS', maxVUs); }
   if (sc.maxVUs !== undefined) sc.maxVUs = Math.min(sc.maxVUs, HARD_MAX_VUS);
   return sc;
 }
@@ -140,7 +184,10 @@ export function buildOptions(slaFile, slaKey, extraThresholds) {
  *  apiSla:false profiles exempt the thresholds for ALL pairs, same as the single-API path. */
 export function buildOptionsMulti(slaPairs, extraThresholds) {
   const profile = JSON.parse(open(import.meta.resolve(`../../profiles/${PROFILE}.json`)));
-  const scenario = applyOverrides(stripComments(profile.scenario));
+  const scenario = applyOverrides(
+    expandShape(stripComments(profile.scenario), profile.shape ? stripComments(profile.shape) : null),
+  );
+  EFFECTIVE.scenario = JSON.parse(JSON.stringify(scenario));
   const apiSla = profile.apiSla !== false;
   const slaCache = {};
   const apiThresholds = {};
@@ -175,9 +222,15 @@ export function buildOptionsMulti(slaPairs, extraThresholds) {
 // Scenarios reuse it via `export { stdHandleSummary as handleSummary } from '../lib/bootstrap.js'`.
 export function stdHandleSummary(data) {
   const s = summarize(data, TESTID);
+  // Effective-config snapshot (portal/DESIGN.md §3.3): what this round ACTUALLY ran —
+  // expanded stages, resolved pools, every applied override. variant=true marks a round
+  // that deviates from the git-versioned profile; such a round must not masquerade as
+  // the canonical one, so the baseline comparison below is skipped for it.
+  s.effective = EFFECTIVE;
+  s.variant = EFFECTIVE.variant;
   // Baseline comparison: advisory only, never changes the verdict (verdict authority = thresholds; BASELINE_TOL_PCT overrides the latency tolerance)
   let cmp = null;
-  if (BASELINE) {
+  if (BASELINE && !EFFECTIVE.variant) {
     cmp = compareBaseline(s, BASELINE, parseInt(__ENV.BASELINE_TOL_PCT || '', 10));
     s.baseline = cmp;
   }
