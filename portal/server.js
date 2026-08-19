@@ -103,37 +103,46 @@ function grafanaLink(runDir) {
   } catch { return null; }
 }
 
-function rounds(envFilter, limit) {
+// Two-phase listing: first a cheap name-only scan of every run dir (filter + global
+// time sort need the full set), then summary/manifest reads for the requested page only.
+function listRounds(envFilter, q) {
   const resultsDir = path.join(PERF_HOME, 'results');
-  const days = listDir(resultsDir).filter((d) => /^\d{8}$/.test(d)).sort().reverse();
-  const out = [];
-  for (const day of days) {
-    const dayDir = path.join(resultsDir, day);
-    const ids = listDir(dayDir).filter((d) => ID_RE.test(d)).sort().reverse();
-    for (const id of ids) {
+  const all = [];
+  for (const day of listDir(resultsDir).filter((d) => /^\d{8}$/.test(d))) {
+    for (const id of listDir(path.join(resultsDir, day))) {
+      if (!ID_RE.test(id)) continue;
       // runId = scenario_env_profile_YYYYMMDD-HHMMSS (fields themselves never contain '_')
       const parts = id.split('_');
       const [scenario, env, profile, ts] = parts.length === 4 ? parts : [id, '', '', ''];
       if (envFilter && env !== envFilter) continue;
-      const runDir = path.join(dayDir, id);
-      const s = readJson(path.join(runDir, 'summary.json'));
-      const started = /^\d{8}-\d{6}$/.test(ts)
-        ? `${ts.slice(0, 4)}-${ts.slice(4, 6)}-${ts.slice(6, 8)} ${ts.slice(9, 11)}:${ts.slice(11, 13)}:${ts.slice(13, 15)}`
-        : '';
-      out.push({
-        id, scenario, env, profile, started,
-        running: !s,
-        verdict: s ? s.verdict : 'RUN',
-        variant: s ? !!s.variant : false,
-        err: s ? [s.errTechnical || 0, s.errBusiness || 0, s.errScript || 0] : null,
-        requests: s ? s.requests : null,
-        rps: s ? s.rps : null,
-        grafana: grafanaLink(runDir),
-      });
-      if (out.length >= limit) return out;
+      if (q && !id.toLowerCase().includes(q)) continue;
+      all.push({ id, day, scenario, env, profile, ts });
     }
   }
-  return out;
+  all.sort((a, b) => (b.ts || b.id).localeCompare(a.ts || a.id)); // newest first
+  return all;
+}
+
+function rounds(envFilter, q, offset, limit) {
+  const all = listRounds(envFilter, (q || '').toLowerCase());
+  const page = all.slice(offset, offset + limit).map((r) => {
+    const runDir = path.join(PERF_HOME, 'results', r.day, r.id);
+    const s = readJson(path.join(runDir, 'summary.json'));
+    const started = /^\d{8}-\d{6}$/.test(r.ts)
+      ? `${r.ts.slice(0, 4)}-${r.ts.slice(4, 6)}-${r.ts.slice(6, 8)} ${r.ts.slice(9, 11)}:${r.ts.slice(11, 13)}:${r.ts.slice(13, 15)}`
+      : '';
+    return {
+      id: r.id, scenario: r.scenario, env: r.env, profile: r.profile, started,
+      running: !s,
+      verdict: s ? s.verdict : 'RUN',
+      variant: s ? !!s.variant : false,
+      err: s ? [s.errTechnical || 0, s.errBusiness || 0, s.errScript || 0] : null,
+      requests: s ? s.requests : null,
+      rps: s ? s.rps : null,
+      grafana: grafanaLink(runDir),
+    };
+  });
+  return { total: all.length, offset, limit, rounds: page };
 }
 
 function findRunDir(id) {
@@ -290,7 +299,12 @@ const server = http.createServer((req, res) => {
       return json(res, 200, out);
     }
     if (p === '/api/rounds')
-      return json(res, 200, rounds(url.searchParams.get('env') || '', Number(url.searchParams.get('limit') || 100)));
+      return json(res, 200, rounds(
+        url.searchParams.get('env') || '',
+        url.searchParams.get('q') || '',
+        Math.max(0, Number(url.searchParams.get('offset') || 0) || 0),
+        Math.min(100, Math.max(1, Number(url.searchParams.get('limit') || 20) || 20)),
+      ));
 
     const m = p.match(/^\/api\/rounds\/([^/]+)\/([a-z]+)$/);
     if (m && RUN_FILES[m[2]]) {

@@ -83,6 +83,14 @@
   .chip{font-family:var(--mono); font-size:11px; padding:3px 10px; border-radius:99px; cursor:pointer;
     border:1px solid var(--line); background:none; color:var(--ink-soft)}
   .chip[aria-pressed="true"]{border-color:var(--signal); color:var(--signal); background:var(--signal-wash)}
+  .chip:disabled{opacity:.4; cursor:not-allowed}
+
+  .listbar{display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap; margin-bottom:12px}
+  .search{flex:1; min-width:170px; font-family:var(--mono); font-size:12px; color:var(--ink);
+    background:var(--paper); border:1px solid var(--line); border-radius:4px; padding:6px 9px}
+  .search::placeholder{color:var(--ink-faint)}
+  .pager{display:flex; gap:8px; align-items:center; font-family:var(--mono); font-size:11px; color:var(--ink-soft)}
+  #pg-info{font-variant-numeric:tabular-nums; white-space:nowrap}
 
   .round{display:grid; grid-template-columns:74px minmax(0,1fr) auto; gap:6px 14px; align-items:center; padding:10px 6px; border-top:1px solid var(--grid)}
   .round:first-of-type{border-top:0}
@@ -158,6 +166,14 @@
   <section class="panel" aria-labelledby="rh">
     <div class="eyebrow" id="rh">Rounds <small>results/ — summary is the verdict authority</small></div>
     <div class="chips" id="chips" role="group" aria-label="Filter by environment"></div>
+    <div class="listbar">
+      <input id="q" class="search" placeholder="filter — scenario / profile / id" aria-label="Filter rounds">
+      <div class="pager">
+        <button class="chip" id="pg-prev">‹ prev</button>
+        <span id="pg-info">–</span>
+        <button class="chip" id="pg-next">next ›</button>
+      </div>
+    </div>
     <div id="rounds"></div>
   </section>
 </main>
@@ -178,6 +194,15 @@ const api = (p) => fetch(p, { headers: HDR }).then((r) => { if (!r.ok) throw new
 let CAT = { scenarios: [], envs: [], profiles: [] };
 let ROUNDS = [];
 let FILTER = 'all';
+let Q = '', OFFSET = 0, TOTAL = 0;
+const PAGE = 20;
+function roundsUrl() {
+  const u = new URLSearchParams();
+  if (FILTER !== 'all') u.set('env', FILTER);
+  if (Q) u.set('q', Q);
+  u.set('offset', OFFSET); u.set('limit', PAGE);
+  return '/api/rounds?' + u;
+}
 
 /* ── shape math ── */
 const secs = (d) => { if (typeof d === 'number') return d; let t = 0, m; const re = /(\d+)(h|m|s)/g;
@@ -314,8 +339,7 @@ function badge(r) {
   return [(r.verdict || 'MEAS').slice(0, 4), 'v-meas'];
 }
 function renderRounds() {
-  const rows = ROUNDS.filter((r) => FILTER === 'all' || r.env === FILTER);
-  $('rounds').innerHTML = rows.map((r) => {
+  $('rounds').innerHTML = ROUNDS.map((r) => {
     const [label, cls] = badge(r);
     const vtag = r.variant ? ' · <span class="vtag">VARIANT</span>' : '';
     const sub = (r.running
@@ -333,13 +357,20 @@ function renderRounds() {
       </div>
       <div class="r-links">${links}</div>
     </div>`;
-  }).join('') || `<p class="empty">No rounds for this environment yet — compose a command on the left and run it on the injector.</p>`;
+  }).join('') || `<p class="empty">No rounds match — launch one from the left, or clear the filter.</p>`;
+}
+function renderPager() {
+  const from = TOTAL === 0 ? 0 : OFFSET + 1;
+  const to = Math.min(OFFSET + PAGE, TOTAL);
+  $('pg-info').textContent = `${from}–${to} of ${TOTAL}`;
+  $('pg-prev').disabled = OFFSET === 0;
+  $('pg-next').disabled = OFFSET + PAGE >= TOTAL;
 }
 function renderChips() {
   $('chips').innerHTML = ['all', ...CAT.envs].map((e) =>
     `<button class="chip" aria-pressed="${e === FILTER}" data-env="${e}">${e}</button>`).join('');
-  document.querySelectorAll('.chip').forEach((c) => c.addEventListener('click', () => {
-    FILTER = c.dataset.env; renderChips(); renderRounds();
+  $('chips').querySelectorAll('.chip').forEach((c) => c.addEventListener('click', () => {
+    FILTER = c.dataset.env; OFFSET = 0; renderChips(); refresh();
   }));
 }
 
@@ -359,20 +390,21 @@ function toast(msg) {
 }
 async function refresh() {
   try {
-    [ROUNDS, LOCKS] = await Promise.all([api('/api/rounds'), api('/api/locks')]);
-    renderRounds(); renderEnvState();
+    const [rr, locks] = await Promise.all([api(roundsUrl()), api('/api/locks')]);
+    ROUNDS = rr.rounds; TOTAL = rr.total; LOCKS = locks;
+    renderRounds(); renderPager(); renderEnvState();
   } catch {}
 }
 async function init() {
   try {
-    const [cat, rounds, locks, health] = await Promise.all(
-      [api('/api/catalog'), api('/api/rounds'), api('/api/locks'), api('/api/health')]);
-    CAT = cat; ROUNDS = rounds; LOCKS = locks;
+    const [cat, rr, locks, health] = await Promise.all(
+      [api('/api/catalog'), api(roundsUrl()), api('/api/locks'), api('/api/health')]);
+    CAT = cat; ROUNDS = rr.rounds; TOTAL = rr.total; LOCKS = locks;
     fill('scenario', CAT.scenarios);
     fill('env', CAT.envs);
     fill('profile', CAT.profiles.map((x) => x.name));
     if (CAT.profiles.some((x) => x.name === 'mix-ladder')) $('profile').value = 'mix-ladder';
-    renderHealth(health); renderChips(); renderRounds(); renderPlot(); renderEnvState();
+    renderHealth(health); renderChips(); renderRounds(); renderPager(); renderPlot(); renderEnvState();
   } catch (e) {
     $('banner').textContent = 'Console API unreachable (' + e.message + ') — start it on the injector: node portal/server.js';
     $('banner').classList.add('show');
@@ -387,6 +419,13 @@ $('profile').addEventListener('change', () => {
 });
 $('scenario').addEventListener('change', renderCmd);
 $('env').addEventListener('change', () => { renderCmd(); renderEnvState(); });
+let qTimer;
+$('q').addEventListener('input', () => {
+  clearTimeout(qTimer);
+  qTimer = setTimeout(() => { Q = $('q').value.trim().toLowerCase(); OFFSET = 0; refresh(); }, 300);
+});
+$('pg-prev').addEventListener('click', () => { OFFSET = Math.max(0, OFFSET - PAGE); refresh(); });
+$('pg-next').addEventListener('click', () => { if (OFFSET + PAGE < TOTAL) { OFFSET += PAGE; refresh(); } });
 ['sp-ladder', 'sp-ramp', 'sp-plateau'].forEach((id) => $(id).addEventListener('input', renderPlot));
 ['ovr-rate', 'ovr-dur', 'ovr-mvu'].forEach((id) => $(id).addEventListener('input', renderCmd));
 
