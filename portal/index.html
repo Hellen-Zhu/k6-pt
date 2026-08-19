@@ -1,0 +1,394 @@
+<!-- k6-pt console — DESIGN PROTOTYPE (mock data inline; the SCENARIOS/PROFILES/ROUNDS
+     constants become API calls when the portal backend lands). Self-contained: open in a browser. -->
+<title>k6-pt Console</title>
+<style>
+  :root{
+    --paper:#F2F5F4; --panel:#FBFDFC; --grid:#D7DFDF; --line:#C7D2D2;
+    --ink:#182730; --ink-soft:#5A6C74; --ink-faint:#8FA0A8;
+    --signal:#5847D8; --signal-ink:#4638B8; --signal-wash:rgba(88,71,216,.10);
+    --pass:#187A44; --fail:#B3261E; --meas:#8A6E14; --run:#5847D8;
+    --pass-wash:rgba(24,122,68,.10); --fail-wash:rgba(179,38,30,.09); --meas-wash:rgba(138,110,20,.10);
+    --focus:#5847D8;
+    --sans:"IBM Plex Sans","Segoe UI",system-ui,-apple-system,sans-serif;
+    --mono:"IBM Plex Mono","Cascadia Code",ui-monospace,"SF Mono",Consolas,monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper:#0E1519; --panel:#141D22; --grid:#243138; --line:#2C3A42;
+      --ink:#E4EDF0; --ink-soft:#98AAB2; --ink-faint:#6B7D86;
+      --signal:#8E7FF2; --signal-ink:#A79BF6; --signal-wash:rgba(142,127,242,.14);
+      --pass:#43B878; --fail:#E5655E; --meas:#D2A62E; --run:#8E7FF2;
+      --pass-wash:rgba(67,184,120,.12); --fail-wash:rgba(229,101,94,.10); --meas-wash:rgba(210,166,46,.12);
+      --focus:#8E7FF2;
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#0E1519; --panel:#141D22; --grid:#243138; --line:#2C3A42;
+    --ink:#E4EDF0; --ink-soft:#98AAB2; --ink-faint:#6B7D86;
+    --signal:#8E7FF2; --signal-ink:#A79BF6; --signal-wash:rgba(142,127,242,.14);
+    --pass:#43B878; --fail:#E5655E; --meas:#D2A62E; --run:#8E7FF2;
+    --pass-wash:rgba(67,184,120,.12); --fail-wash:rgba(229,101,94,.10); --meas-wash:rgba(210,166,46,.12);
+    --focus:#8E7FF2;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--paper); color:var(--ink);
+    font-family:var(--sans); font-size:14px; line-height:1.45;
+    -webkit-font-smoothing:antialiased;
+  }
+  :focus-visible{outline:2px solid var(--focus); outline-offset:2px; border-radius:2px}
+
+  /* ── header ─────────────────────────────── */
+  .top{
+    display:flex; align-items:baseline; justify-content:space-between; gap:16px; flex-wrap:wrap;
+    padding:14px 22px 12px; border-bottom:1px solid var(--line);
+  }
+  .brand{font-family:var(--mono); font-size:15px; font-weight:600; letter-spacing:.04em}
+  .brand em{font-style:normal; color:var(--signal)}
+  .brand span{font-weight:400; color:var(--ink-soft); margin-left:8px; letter-spacing:.12em; text-transform:uppercase; font-size:11px}
+  .health{display:flex; gap:14px; flex-wrap:wrap; font-family:var(--mono); font-size:11.5px; color:var(--ink-soft)}
+  .health b{font-weight:500; color:var(--ink)}
+  .dot{display:inline-block; width:7px; height:7px; border-radius:50%; margin-right:5px; vertical-align:1px}
+  .dot.ok{background:var(--pass)}
+  .clock{font-variant-numeric:tabular-nums}
+
+  /* ── layout ─────────────────────────────── */
+  .wrap{
+    display:grid; grid-template-columns:minmax(370px,5fr) 7fr; gap:18px;
+    padding:18px 22px 8px; max-width:1280px; margin:0 auto;
+  }
+  .panel{background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:18px 18px 16px}
+  .eyebrow{
+    font-family:var(--mono); font-size:10.5px; letter-spacing:.16em; text-transform:uppercase;
+    color:var(--ink-soft); margin-bottom:14px;
+  }
+  .eyebrow small{letter-spacing:.06em; text-transform:none; color:var(--ink-faint); float:right; font-size:10.5px}
+
+  /* ── launch fields ──────────────────────── */
+  .field{display:grid; grid-template-columns:88px 1fr auto; align-items:center; gap:10px; margin-bottom:10px}
+  .field label{font-family:var(--mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft)}
+  .field select{
+    font-family:var(--mono); font-size:13px; color:var(--ink);
+    background:var(--paper); border:1px solid var(--line); border-radius:4px; padding:7px 8px; width:100%;
+  }
+  .envstate{font-family:var(--mono); font-size:11px; white-space:nowrap}
+  .envstate.idle{color:var(--pass)}
+  .envstate.busy{color:var(--fail)}
+
+  /* ── the load-shape plot (signature) ────── */
+  .shape{margin:14px 0 4px; border:1px solid var(--line); border-radius:4px; background:var(--paper); padding:8px 8px 4px}
+  .shape svg{display:block; width:100%; height:auto}
+  .shape-cap{
+    display:flex; justify-content:space-between; gap:12px; align-items:baseline;
+    padding:6px 4px 6px; font-size:12px; color:var(--ink-soft);
+  }
+  .shape-cap b{font-family:var(--mono); font-weight:500; color:var(--ink); white-space:nowrap}
+
+  .ovr{display:flex; gap:10px; align-items:end; margin:12px 0 4px; flex-wrap:wrap}
+  .ovr .o{display:flex; flex-direction:column; gap:4px}
+  .ovr label{font-family:var(--mono); font-size:10px; letter-spacing:.1em; color:var(--ink-soft); text-transform:uppercase}
+  .ovr input{
+    width:92px; font-family:var(--mono); font-size:12.5px; padding:6px 8px; color:var(--ink);
+    background:var(--paper); border:1px solid var(--line); border-radius:4px;
+  }
+  .ovr input::placeholder{color:var(--ink-faint)}
+  .ovr-note{font-size:11.5px; color:var(--ink-faint); margin:2px 0 12px}
+
+  .btn-start{
+    width:100%; padding:11px 14px; border:0; border-radius:4px; cursor:pointer;
+    font-family:var(--mono); font-size:13px; font-weight:600; letter-spacing:.02em;
+    background:var(--signal); color:#fff;
+  }
+  .btn-start:hover:not(:disabled){background:var(--signal-ink)}
+  .btn-start:disabled{background:var(--line); color:var(--ink-faint); cursor:not-allowed}
+  .btn-prep{
+    width:100%; margin-top:8px; padding:8px 14px; border-radius:4px; cursor:pointer;
+    font-family:var(--mono); font-size:11.5px; color:var(--ink-soft);
+    background:none; border:1px dashed var(--line);
+  }
+  .btn-prep:hover{color:var(--ink); border-color:var(--ink-faint)}
+
+  /* ── rounds ─────────────────────────────── */
+  .chips{display:flex; gap:6px; margin-bottom:12px; flex-wrap:wrap}
+  .chip{
+    font-family:var(--mono); font-size:11px; padding:3px 10px; border-radius:99px; cursor:pointer;
+    border:1px solid var(--line); background:none; color:var(--ink-soft);
+  }
+  .chip[aria-pressed="true"]{border-color:var(--signal); color:var(--signal); background:var(--signal-wash)}
+
+  .round{
+    display:grid; grid-template-columns:74px minmax(0,1fr) auto; gap:6px 14px; align-items:center;
+    padding:10px 6px; border-top:1px solid var(--grid);
+  }
+  .round:first-of-type{border-top:0}
+  .v{font-family:var(--mono); font-size:10.5px; font-weight:600; letter-spacing:.08em;
+     padding:3px 0; text-align:center; border-radius:3px}
+  .v-pass{color:var(--pass); background:var(--pass-wash)}
+  .v-fail{color:var(--fail); background:var(--fail-wash)}
+  .v-meas{color:var(--meas); background:var(--meas-wash)}
+  .v-run{color:var(--run); background:var(--signal-wash); animation:breathe 2.2s ease-in-out infinite}
+  @keyframes breathe{50%{opacity:.45}}
+  @media (prefers-reduced-motion: reduce){
+    .v-run{animation:none}
+    .shape g.reveal{transition:none !important}
+  }
+  .r-main{min-width:0}
+  .r-id{font-family:var(--mono); font-size:12.5px; color:var(--ink); overflow-wrap:anywhere}
+  .r-id .sep{color:var(--ink-faint)}
+  .r-sub{font-family:var(--mono); font-size:11px; color:var(--ink-soft); font-variant-numeric:tabular-nums; margin-top:2px}
+  .r-sub .err-t{color:var(--fail)}
+  .r-links{display:flex; gap:10px; font-family:var(--mono); font-size:11.5px; white-space:nowrap}
+  .r-links a{color:var(--signal); text-decoration:none}
+  .r-links a:hover{text-decoration:underline}
+
+  .foot{
+    max-width:1280px; margin:0 auto; padding:10px 22px 26px;
+    font-size:12px; color:var(--ink-faint);
+  }
+
+  .toast{
+    position:fixed; left:50%; bottom:26px; transform:translateX(-50%);
+    background:var(--ink); color:var(--paper); font-family:var(--mono); font-size:12px;
+    padding:9px 16px; border-radius:5px; opacity:0; pointer-events:none; transition:opacity .25s;
+  }
+  .toast.show{opacity:1}
+
+  @media (max-width: 920px){
+    .wrap{grid-template-columns:1fr}
+    .round{grid-template-columns:74px minmax(0,1fr)}
+    .r-links{grid-column:2; justify-content:flex-start}
+  }
+</style>
+
+<header class="top">
+  <div class="brand"><em>k6-pt</em> console <span>load-test remote</span></div>
+  <div class="health" role="status">
+    <span><span class="dot ok"></span>podman healthy</span>
+    <span>k6 <b>v2.1.0</b> · image pinned</span>
+    <span>disk <b>71%</b> free</span>
+    <span class="clock" id="clock">--:--:-- UTC</span>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- ── LAUNCH ─────────────────────────────── -->
+  <section class="panel" aria-labelledby="lh">
+    <div class="eyebrow" id="lh">Launch <small>runs ./run.sh on this box</small></div>
+
+    <div class="field">
+      <label for="scenario">Scenario</label>
+      <select id="scenario"></select><span></span>
+    </div>
+    <div class="field">
+      <label for="env">Environment</label>
+      <select id="env"></select>
+      <span class="envstate idle" id="envstate">● idle</span>
+    </div>
+    <div class="field">
+      <label for="profile">Profile</label>
+      <select id="profile"></select><span></span>
+    </div>
+
+    <figure class="shape" aria-label="Load shape preview">
+      <svg id="plot" viewBox="0 0 620 190" role="img"></svg>
+      <figcaption class="shape-cap">
+        <span id="pdesc"></span><b id="pstat"></b>
+      </figcaption>
+    </figure>
+
+    <div class="ovr">
+      <div class="o"><label for="ovr-rate">rate</label><input id="ovr-rate" placeholder="profile"></div>
+      <div class="o"><label for="ovr-dur">duration</label><input id="ovr-dur" placeholder="profile"></div>
+      <div class="o"><label for="ovr-mvu">max_vus</label><input id="ovr-mvu" placeholder="profile"></div>
+    </div>
+    <p class="ovr-note">Overrides touch scalar keys only — stages are literal, edit the profile to change a ladder.</p>
+
+    <button class="btn-start" id="start">Start round on dev</button>
+    <button class="btn-prep" id="prep">Seed pools (prep.sh) — sends real traffic, kept separate on purpose</button>
+  </section>
+
+  <!-- ── ROUNDS ─────────────────────────────── -->
+  <section class="panel" aria-labelledby="rh">
+    <div class="eyebrow" id="rh">Rounds <small>results/ — summary is the verdict authority</small></div>
+    <div class="chips" id="chips" role="group" aria-label="Filter by environment">
+      <button class="chip" aria-pressed="true"  data-env="all">all</button>
+      <button class="chip" aria-pressed="false" data-env="local">local</button>
+      <button class="chip" aria-pressed="false" data-env="dev">dev</button>
+      <button class="chip" aria-pressed="false" data-env="sit">sit</button>
+    </div>
+    <div id="rounds"></div>
+  </section>
+</main>
+
+<footer class="foot">
+  This console is a remote for <span style="font-family:var(--mono)">run.sh</span> — scenarios and profiles live in git,
+  results/ is the database. All timestamps UTC.
+</footer>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+/* ── catalog (in the real portal these come from directory listings) ── */
+const SCENARIOS = ["trade-mix-full","trade-mix-book","trade-mix-amend","trades-create","trades-query","checker-approve"];
+const ENVS = {local:{busy:false}, dev:{busy:true}, sit:{busy:false}};
+
+const PROFILES = {
+  "smoke":      {unit:"iter/s", start:1, segs:[{d:60,t:1}],
+                 desc:"Link check — every flow fires once. Verdict = three error classes clean."},
+  "baseline":   {unit:"VU", start:1, segs:[{d:300,t:1}],
+                 desc:"Single-VU calibration, closed model. Promote after 3 stable passes."},
+  "mix":        {unit:"req/s", start:10, segs:[{d:600,t:10}],
+                 desc:"One total arrival rate, split across flows by the ratio table. RATE= scales the whole mix."},
+  "mix-ladder": {unit:"req/s", start:0, segs:[{d:60,t:10},{d:300,t:10},{d:60,t:50},{d:300,t:50},{d:60,t:100},{d:300,t:100},{d:60,t:200},{d:300,t:200}],
+                 desc:"Stepped total rate at fixed ratios — finds the knee. Measurement round: the knee is the deliverable, not PASS/FAIL."},
+  "stress":     {unit:"req/s", start:0, segs:[{d:600,t:250}],
+                 desc:"Past-peak ramp until degradation shows its shape."},
+  "spike":      {unit:"req/s", start:0, segs:[{d:10,t:150},{d:120,t:150},{d:10,t:0},{d:120,t:0}],
+                 desc:"Sudden surge, then release — recovery time is the metric."},
+  "soak":       {unit:"req/s", start:10, segs:[{d:14400,t:10}],
+                 desc:"Hours at steady load — drift and leaks, not peaks."},
+};
+
+const ROUNDS = [
+  {v:"run",  s:"trade-mix-full", e:"dev", p:"mix",        at:"2026-08-19 13:19:32", note:"elapsed", elapsed:163, links:["tail log"]},
+  {v:"pass", s:"trade-mix-full", e:"dev", p:"smoke",      at:"2026-08-19 12:58:11", err:[0,0,0]},
+  {v:"fail", s:"trade-mix-full", e:"dev", p:"mix",        at:"2026-08-18 15:42:09", err:[312,0,0]},
+  {v:"meas", s:"trade-mix-full", e:"sit", p:"mix-ladder", at:"2026-08-17 02:44:55", err:[6959,0,0]},
+  {v:"pass", s:"trade-mix-book", e:"dev", p:"mix-ref",    at:"2026-08-14 09:12:40", err:[0,0,0]},
+  {v:"pass", s:"trades-create",  e:"dev", p:"load",       at:"2026-08-13 07:03:18", err:[0,2,0]},
+];
+
+/* ── helpers ── */
+const $ = id => document.getElementById(id);
+const fmtDur = s => s>=3600 ? (s/3600)+"h" : s>=60 ? Math.round(s/60)+"m" : s+"s";
+
+/* ── populate selectors ── */
+function fill(sel, items){ $(sel).innerHTML = items.map(i=>`<option>${i}</option>`).join(""); }
+fill("scenario", SCENARIOS);
+fill("env", Object.keys(ENVS).map(e => e + (ENVS[e].busy ? "  ● busy" : "")));
+fill("profile", Object.keys(PROFILES));
+$("env").selectedIndex = 1;           // dev — demonstrates the lock
+$("profile").value = "mix-ladder";    // demonstrates the shape
+
+/* ── the signature: load-shape plot ── */
+function renderPlot(){
+  const p = PROFILES[$("profile").value];
+  const W=620, H=190, L=46, R=14, T=20, B=26;
+  const total = p.segs.reduce((a,s)=>a+s.d,0);
+  const max = Math.max(p.start, ...p.segs.map(s=>s.t), 1);
+  const X = t => L + t/total*(W-L-R);
+  const Y = v => T + (1 - v/max)*(H-T-B);
+
+  let t=0, pts=[[X(0),Y(p.start)]], plateaus=[];
+  let prev=p.start;
+  for(const s of p.segs){
+    const t0=t; t+=s.d;
+    pts.push([X(t),Y(s.t)]);
+    if(s.t===prev && s.d/total > .07) plateaus.push({x:X((t0+t)/2), y:Y(s.t), v:s.t});
+    prev=s.t;
+  }
+  const line = pts.map(p=>p.join(",")).join(" ");
+  const area = `${L},${Y(0)} ${line} ${X(total)},${Y(0)}`;
+
+  $("plot").innerHTML = `
+    <defs>
+      <pattern id="mm" width="16" height="16" patternUnits="userSpaceOnUse">
+        <path d="M16 0H0V16" fill="none" stroke="var(--grid)" stroke-width="1"/>
+      </pattern>
+      <clipPath id="rev"><rect id="revr" x="0" y="0" width="${W}" height="${H}"/></clipPath>
+    </defs>
+    <rect x="${L}" y="${T}" width="${W-L-R}" height="${H-T-B}" fill="url(#mm)" stroke="var(--line)"/>
+    <text x="${L}" y="12" font-family="var(--mono)" font-size="10" fill="var(--ink-faint)">${p.unit}</text>
+    <text x="${L-6}" y="${Y(max)+3}" text-anchor="end" font-family="var(--mono)" font-size="10" fill="var(--ink-soft)">${max}</text>
+    <text x="${L-6}" y="${Y(0)+3}"  text-anchor="end" font-family="var(--mono)" font-size="10" fill="var(--ink-faint)">0</text>
+    <text x="${W-R}" y="${H-8}" text-anchor="end" font-family="var(--mono)" font-size="10" fill="var(--ink-soft)">${fmtDur(total)}</text>
+    <g class="reveal" clip-path="url(#rev)">
+      <polygon points="${area}" fill="var(--signal-wash)"/>
+      <polyline points="${line}" fill="none" stroke="var(--signal)" stroke-width="2" stroke-linejoin="round"/>
+      ${plateaus.map(a=>`<text x="${a.x}" y="${a.y-6}" text-anchor="middle" font-family="var(--mono)" font-size="10" fill="var(--ink-soft)">${a.v}</text>`).join("")}
+    </g>`;
+
+  const rect = $("revr");
+  if(!matchMedia("(prefers-reduced-motion: reduce)").matches){
+    rect.setAttribute("width", 0);
+    rect.style.transition = "none";
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
+      rect.style.transition = "width .5s ease-out";
+      rect.setAttribute("width", W);
+    }));
+  }
+  $("pdesc").textContent = p.desc;
+  $("pstat").textContent = `top ${max} ${p.unit} · ${fmtDur(total)}`;
+}
+
+/* ── env lock ── */
+function envName(){ return $("env").value.split(" ")[0]; }
+function renderEnv(){
+  const busy = ENVS[envName()].busy;
+  const st = $("envstate");
+  st.textContent = busy ? "▶ round in progress — locked" : "● idle";
+  st.className = "envstate " + (busy ? "busy" : "idle");
+  const b = $("start");
+  b.disabled = busy;
+  b.textContent = busy ? `${envName()} is locked — round in progress` : `Start round on ${envName()}`;
+}
+
+/* ── rounds list ── */
+const VLABEL = {run:"RUN", pass:"PASS", fail:"FAIL", meas:"MEAS"};
+function renderRounds(filter){
+  $("rounds").innerHTML = ROUNDS
+    .filter(r => filter==="all" || r.e===filter)
+    .map(r => {
+      const sub = r.v==="run"
+        ? `started ${r.at.slice(11)} UTC · <span data-el="${r.elapsed}" class="el">${fmtEl(r.elapsed)}</span> elapsed`
+        : `${r.at} UTC · T <span class="${r.err[0]?"err-t":""}">${r.err[0]}</span> · B ${r.err[1]} · S ${r.err[2]}`;
+      const links = (r.links||["report","summary","grafana"]).map(l=>`<a href="#">${l}</a>`).join("");
+      return `<div class="round" data-env="${r.e}">
+        <span class="v v-${r.v}">${VLABEL[r.v]}</span>
+        <div class="r-main">
+          <div class="r-id">${r.s}<span class="sep"> · </span>${r.e}<span class="sep"> · </span>${r.p}</div>
+          <div class="r-sub">${sub}</div>
+        </div>
+        <div class="r-links">${links}</div>
+      </div>`;
+    }).join("") || `<p style="color:var(--ink-faint);font-size:12.5px;padding:14px 4px">No rounds for this environment yet — launch one from the left.</p>`;
+}
+const fmtEl = s => `${String(Math.floor(s/60)).padStart(2,"0")}m${String(s%60).padStart(2,"0")}`;
+
+/* ── interactions ── */
+$("profile").addEventListener("change", renderPlot);
+$("env").addEventListener("change", renderEnv);
+document.querySelectorAll(".chip").forEach(c => c.addEventListener("click", () => {
+  document.querySelectorAll(".chip").forEach(x=>x.setAttribute("aria-pressed","false"));
+  c.setAttribute("aria-pressed","true");
+  renderRounds(c.dataset.env);
+}));
+$("start").addEventListener("click", () => {
+  const e = envName();
+  ENVS[e].busy = true;
+  ROUNDS.unshift({v:"run", s:$("scenario").value, e, p:$("profile").value,
+                  at:new Date().toISOString().replace("T"," ").slice(0,19), elapsed:0, note:"elapsed", links:["tail log"]});
+  fill("env", Object.keys(ENVS).map(x => x + (ENVS[x].busy ? "  ● busy" : "")));
+  [...$("env").options].forEach(o=>{ if(o.value.startsWith(e)) o.selected = true; });
+  renderEnv(); renderRounds(document.querySelector('.chip[aria-pressed="true"]').dataset.env);
+  const t = $("toast");
+  t.textContent = `Round started on ${e} — run.sh takes it from here.`;
+  t.classList.add("show"); setTimeout(()=>t.classList.remove("show"), 4200);
+});
+$("prep").addEventListener("click", () => {
+  const t = $("toast");
+  t.textContent = "prep.sh needs an explicit confirmation — it burns shared-env rate budget.";
+  t.classList.add("show"); setTimeout(()=>t.classList.remove("show"), 4200);
+});
+
+/* ── clocks ── */
+setInterval(()=>{
+  $("clock").textContent = new Date().toISOString().slice(11,19)+" UTC";
+  document.querySelectorAll(".el").forEach(el=>{
+    const s = +el.dataset.el + 1; el.dataset.el = s; el.textContent = fmtEl(s);
+  });
+}, 1000);
+
+renderPlot(); renderEnv(); renderRounds("all");
+</script>
