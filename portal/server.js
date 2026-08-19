@@ -235,8 +235,12 @@ function launch(req, res, body) {
   let child;
   try {
     const out = fs.openSync(logFile, 'a');
-    child = spawn('./run.sh', [scenario, env, profile, ...args],
-      { cwd: PERF_HOME, detached: true, stdio: ['ignore', out, out] });
+    // Invoke run.sh through bash explicitly rather than via its shebang: identical on
+    // Linux/macOS, and it is what makes the Windows dev loop work (Git Bash provides
+    // bash.exe; Windows cannot exec .sh files directly — spawn EFTYPE). Same doctrine
+    // as the framework README: "Windows runs the same scripts via Git Bash".
+    child = spawn('bash', ['run.sh', scenario, env, profile, ...args],
+      { cwd: PERF_HOME, detached: true, windowsHide: true, stdio: ['ignore', out, out] });
     fs.closeSync(out);
   } catch (e) {
     releaseLock(env);
