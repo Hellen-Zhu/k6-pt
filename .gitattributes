@@ -1,0 +1,3 @@
+# Shell scripts must check out with LF everywhere — bash (Git Bash included)
+# chokes on CRLF shebangs/lines; this kills the whole class at the source.
+*.sh text eol=lf

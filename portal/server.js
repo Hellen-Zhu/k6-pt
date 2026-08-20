@@ -164,8 +164,9 @@ function findRunDir(id) {
 // the frontend renders "viewer mode" and launch() refuses with a clear error
 // instead of a 202 that dies silently.
 function hasK6() {
-  return (process.env.PATH || '').split(path.delimiter)
-    .some((d) => { try { fs.accessSync(path.join(d, 'k6'), fs.constants.X_OK); return true; } catch { return false; } });
+  const names = process.platform === 'win32' ? ['k6.exe', 'k6.cmd', 'k6'] : ['k6'];
+  return (process.env.PATH || '').split(path.delimiter).some((d) =>
+    names.some((n) => { try { fs.accessSync(path.join(d, n), fs.constants.X_OK); return true; } catch { return false; } }));
 }
 
 function health() {
