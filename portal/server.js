@@ -163,11 +163,17 @@ function findRunDir(id) {
 // Boxes without it (e.g. the Windows dev loop) still serve everything read-only —
 // the frontend renders "viewer mode" and launch() refuses with a clear error
 // instead of a 202 that dies silently.
-function hasK6() {
+function k6Path() {
   const names = process.platform === 'win32' ? ['k6.exe', 'k6.cmd', 'k6'] : ['k6'];
-  return (process.env.PATH || '').split(path.delimiter).some((d) =>
-    names.some((n) => { try { fs.accessSync(path.join(d, n), fs.constants.X_OK); return true; } catch { return false; } }));
+  for (const d of (process.env.PATH || '').split(path.delimiter)) {
+    for (const n of names) {
+      const p = path.join(d, n);
+      try { fs.accessSync(p, fs.constants.X_OK); return p; } catch {}
+    }
+  }
+  return null;
 }
+const hasK6 = () => !!k6Path();
 
 function health() {
   const checks = [];
@@ -175,15 +181,26 @@ function health() {
 
   add('framework', fs.existsSync(path.join(PERF_HOME, 'run.sh')), PERF_HOME);
 
-  const k6OnPath = hasK6();
-  add('k6 shim', k6OnPath, k6OnPath ? 'k6 found on PATH' : 'no k6 on PATH — install the podman shim');
+  const k6p = k6Path();
+  add('k6', !!k6p, k6p || 'no k6 on PATH — bare binary or podman shim');
 
-  const img = process.env.K6_IMAGE || '';
-  add('K6_IMAGE', !!img, img ? img.split('/').pop() : 'not set');
-
-  let podman = false, pv = 'not found';
-  try { pv = execFileSync('podman', ['--version'], { timeout: 2500 }).toString().trim(); podman = true; } catch {}
-  add('podman', podman, pv);
+  // K6_IMAGE/podman only matter when the k6 on PATH is the podman shim (a script,
+  // first bytes '#!'); a bare binary (Windows dev loop, plain installs) needs neither.
+  let shim = false;
+  if (k6p) {
+    try {
+      const fd = fs.openSync(k6p, 'r'); const b = Buffer.alloc(2);
+      fs.readSync(fd, b, 0, 2, 0); fs.closeSync(fd);
+      shim = b.toString() === '#!';
+    } catch {}
+  }
+  if (shim) {
+    const img = process.env.K6_IMAGE || '';
+    add('K6_IMAGE', !!img, img ? img.split('/').pop() : 'not set');
+    let podman = false, pv = 'not found';
+    try { pv = execFileSync('podman', ['--version'], { timeout: 2500 }).toString().trim(); podman = true; } catch {}
+    add('podman', podman, pv);
+  }
 
   let disk = 'n/a', diskOk = true;
   try {
@@ -195,7 +212,7 @@ function health() {
 
   return {
     ok: checks.every((c) => c.ok),
-    capable: fs.existsSync(path.join(PERF_HOME, 'run.sh')) && k6OnPath,
+    capable: fs.existsSync(path.join(PERF_HOME, 'run.sh')) && !!k6p,
     checks,
     utc: new Date().toISOString(),
   };
