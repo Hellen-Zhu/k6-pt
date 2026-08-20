@@ -322,11 +322,16 @@ function renderCmd() {
 let LOCKS = {};
 function renderEnvState() {
   const env = $('env').value;
-  const busy = !!LOCKS[env] || ROUNDS.some((r) => r.running && r.env === env);
   const st = $('envstate');
+  const b = $('start');
+  if (!CAPABLE) {
+    st.textContent = '—'; st.className = 'envstate';
+    b.disabled = true; b.textContent = 'Viewer mode — launch on the injector';
+    return;
+  }
+  const busy = !!LOCKS[env] || ROUNDS.some((r) => r.running && r.env === env);
   st.textContent = busy ? '▶ round in progress — locked' : '● idle';
   st.className = 'envstate ' + (busy ? 'busy' : 'idle');
-  const b = $('start');
   b.disabled = busy;
   b.textContent = busy ? `${env} is locked — round in progress` : `Start round on ${env}`;
 }
@@ -374,11 +379,23 @@ function renderChips() {
   }));
 }
 
-/* ── health ── */
+/* ── health: executor boxes get the full instrument row (red dots are diagnostic —
+       they show the portal process's own env, which is what spawned rounds inherit);
+       viewer boxes (no k6, e.g. the Windows dev loop) get one quiet line instead. ── */
+let CAPABLE = true;
 function renderHealth(h) {
+  CAPABLE = !!h.capable;
+  const clock = '<span class="clock" id="clock">--:--:-- UTC</span>';
+  if (!CAPABLE) {
+    const disk = (h.checks.find((c) => c.name === 'disk') || {}).detail || '';
+    $('health').innerHTML =
+      `<span style="color:var(--ink-faint)">⌁ viewer mode — this box can't run rounds</span>`
+      + (disk ? `<span>disk <b>${disk}</b></span>` : '') + clock;
+    return;
+  }
   const items = h.checks.map((c) =>
     `<span><span class="dot ${c.ok ? 'ok' : 'bad'}"></span>${c.name} <b>${c.detail}</b></span>`).join('');
-  $('health').innerHTML = items + '<span class="clock" id="clock">--:--:-- UTC</span>';
+  $('health').innerHTML = items + clock;
 }
 
 /* ── init ── */

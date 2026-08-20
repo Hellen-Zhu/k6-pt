@@ -159,14 +159,22 @@ function findRunDir(id) {
 }
 
 /* ── /api/health ─────────────────────────────────────────── */
+// Executor capability = framework + a k6 on PATH (bare binary or podman shim).
+// Boxes without it (e.g. the Windows dev loop) still serve everything read-only —
+// the frontend renders "viewer mode" and launch() refuses with a clear error
+// instead of a 202 that dies silently.
+function hasK6() {
+  return (process.env.PATH || '').split(path.delimiter)
+    .some((d) => { try { fs.accessSync(path.join(d, 'k6'), fs.constants.X_OK); return true; } catch { return false; } });
+}
+
 function health() {
   const checks = [];
   const add = (name, ok, detail) => checks.push({ name, ok, detail });
 
   add('framework', fs.existsSync(path.join(PERF_HOME, 'run.sh')), PERF_HOME);
 
-  const k6OnPath = (process.env.PATH || '').split(path.delimiter)
-    .some((d) => { try { fs.accessSync(path.join(d, 'k6'), fs.constants.X_OK); return true; } catch { return false; } });
+  const k6OnPath = hasK6();
   add('k6 shim', k6OnPath, k6OnPath ? 'k6 found on PATH' : 'no k6 on PATH — install the podman shim');
 
   const img = process.env.K6_IMAGE || '';
@@ -184,7 +192,12 @@ function health() {
   } catch {}
   add('disk', diskOk, disk);
 
-  return { ok: checks.every((c) => c.ok), checks, utc: new Date().toISOString() };
+  return {
+    ok: checks.every((c) => c.ok),
+    capable: fs.existsSync(path.join(PERF_HOME, 'run.sh')) && k6OnPath,
+    checks,
+    utc: new Date().toISOString(),
+  };
 }
 
 /* ── env lock (one round per env — shared-environment discipline) ── */
@@ -222,6 +235,8 @@ function launch(req, res, body) {
   if (!cat.envs.includes(env)) return json(res, 400, { error: `unknown env: ${env}` });
   const prof = cat.profiles.find((x) => x.name === profile);
   if (!prof) return json(res, 400, { error: `unknown profile: ${profile}` });
+  if (!hasK6())
+    return json(res, 400, { error: 'this host cannot execute rounds — no k6 on PATH (viewer mode); launch on the injector' });
   if (prof.locked && Object.keys(overrides).length)
     return json(res, 400, { error: 'locked profile accepts no overrides — its parameters are part of the conclusion' });
 
