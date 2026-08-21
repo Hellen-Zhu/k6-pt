@@ -1,0 +1,45 @@
+# k6-pt portal CI/CD — placeholders in <>; no npm install / no build on purpose
+# (the portal is Node stdlib only; "build" is a syntax check, deploy is file sync + restart).
+trigger:
+  branches: { include: [main] }
+
+stages:
+- stage: Validate
+  jobs:
+  - job: check
+    pool: { name: '<linux-agent-pool>' }
+    steps:
+    - script: node --check portal/server.js
+      displayName: portal syntax check (stdlib only — nothing to install)
+    - script: bash -n run.sh prep.sh scripts/*.sh
+      displayName: shell syntax check
+    - publish: $(Build.SourcesDirectory)
+      artifact: k6pt
+
+- stage: Deploy
+  dependsOn: Validate
+  jobs:
+  - deployment: injector
+    environment:
+      name: '<ado-environment-with-injector-vm>'
+      resourceType: VirtualMachine
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - download: current
+            artifact: k6pt
+          - script: |
+              set -e
+              DEST="$HOME/perf"
+              # Server-local truth is NEVER overwritten by CD: real env config,
+              # results history, portal runtime state (locks/logs/audit).
+              rsync -a --delete \
+                --exclude 'config/environments/' \
+                --exclude 'results/' \
+                --exclude 'portal/.locks/' \
+                --exclude 'portal/logs/' \
+                --exclude 'portal/runs.jsonl' \
+                "$(Pipeline.Workspace)/k6pt/" "$DEST/"
+              systemctl --user restart k6pt-portal
+            displayName: sync tree & restart portal
