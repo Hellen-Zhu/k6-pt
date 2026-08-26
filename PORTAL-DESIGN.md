@@ -3,12 +3,12 @@
 > 定位一句话:**git 化压测框架的遥控器**——触发、观测、归档索引;不是脚本管理平台。
 > 事实来源永远是仓库(脚本/流表)与 profile(形状);portal 负责让"发起一轮正确参数的
 > 测试、读懂历史轮次的判定"不需要 SSH。
-> UI 原型:`portal/index.html`(mock 数据内联,零依赖,即未来前端骨架)。
+> UI 原型:`index.html`(仓库根;曾为 mock 原型,现为真实前端)。
 
 ## 0. 服务形态
 
 - 单机、无状态:与框架同机同用户,systemd user service(或 nohup)拉起,绑私有网段地址;
-- 所有状态在文件系统:`results/` 就是数据库,外加一个 `runs.jsonl` 审计流水;
+- 所有状态在文件系统:`results/` 就是数据库,portal 运行时状态(锁/日志/审计)收在 `.portal/`(gitignored);
 - 触发的轮次以 `setsid` 脱离 portal 进程树——portal 重启不影响在跑的 soak,
   状态从文件系统恢复;
 - 非目标:HA、外部数据库、用户体系(v1 = 共享 token + 每次触发一条审计行)。
@@ -21,7 +21,7 @@ portal 只允许通过以下三种方式接触框架:
 2. **读取** `results/` 下的文件(summary.json / report.html / manifest / k6.log);
 3. **列举** `src/`、`profiles/`、`config/environments/` 目录(生成下拉目录)。
 
-永不 import 框架内部代码。`PERF_HOME` = portal 所在目录的上一级(同 repo 部署天然成立);
+永不 import 框架内部代码。`PERF_HOME` = server.js 自身所在目录(与 run.sh 同目录,同 repo 部署天然成立);
 将来若拆分仓库,补一行 `PERF_HOME` 配置即完成迁移——repo 边界跟随接口边界。
 
 ## 2. 语言与运行时
@@ -81,7 +81,7 @@ LADDER=10,50,100,200    RAMP=1m    PLATEAU=5m
   **可命名**("ladder 10-200×4" 能进报告,一坨 JSON 不能)、
   **可继承**(参数只改动那一两个,文本框每次从零粘贴、漂移无声)。
 
-## 4. UI 设计要点(以 portal/index.html 原型为准)
+## 4. UI 设计要点(以 index.html 为准)
 
 - 图纸遥测风:chart-paper 底、全数据等宽字体、UTC 实时钟;信号紫仅用于载荷曲线与发射钮;
   语义色独立(PASS 绿 / FAIL 红 / MEAS 琥珀);亮暗双主题;

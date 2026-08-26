@@ -36,7 +36,7 @@ const BASELINE = loadBaseline();
 
 const HARD_MAX_VUS = 500;
 
-// ── Shape expansion & effective-config record (portal/DESIGN.md §3) ─────────────
+// ── Shape expansion & effective-config record (PORTAL-DESIGN.md §3) ─────────────
 // A measurement profile may carry a "shape" block instead of literal stages; the
 // generator turns its parameters into stages at init, and LADDER/RAMP/PLATEAU env
 // overrides regenerate them — so exploring a different ladder needs no file edit.
@@ -222,7 +222,7 @@ export function buildOptionsMulti(slaPairs, extraThresholds) {
 // Scenarios reuse it via `export { stdHandleSummary as handleSummary } from '../lib/bootstrap.js'`.
 export function stdHandleSummary(data) {
   const s = summarize(data, TESTID);
-  // Effective-config snapshot (portal/DESIGN.md §3.3): what this round ACTUALLY ran —
+  // Effective-config snapshot (PORTAL-DESIGN.md §3.3): what this round ACTUALLY ran —
   // expanded stages, resolved pools, every applied override. variant=true marks a round
   // that deviates from the git-versioned profile; such a round must not masquerade as
   // the canonical one, so the baseline comparison below is skipped for it.

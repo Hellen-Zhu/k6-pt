@@ -1,6 +1,6 @@
 # systemd USER unit — install on the injector:
-#   mkdir -p ~/.config/systemd/user && cp portal/deploy/k6pt-portal.service ~/.config/systemd/user/
-#   cp portal/deploy/k6pt-portal.env.example ~/.config/k6pt-portal.env   # then fill real values
+#   mkdir -p ~/.config/systemd/user && cp deploy/k6pt-portal.service ~/.config/systemd/user/
+#   cp deploy/k6pt-portal.env.example ~/.config/k6pt-portal.env   # then fill real values
 #   systemctl --user daemon-reload && systemctl --user enable --now k6pt-portal
 #   loginctl enable-linger $USER   # keeps the service alive without a login session
 [Unit]
@@ -8,7 +8,7 @@ Description=k6-pt console (portal)
 
 [Service]
 EnvironmentFile=%h/.config/k6pt-portal.env
-ExecStart=/usr/bin/env node %h/perf/portal/server.js
+ExecStart=/usr/bin/env node %h/perf/server.js
 WorkingDirectory=%h/perf
 Restart=on-failure
 RestartSec=3

@@ -9,7 +9,7 @@ stages:
   - job: check
     pool: { name: '<linux-agent-pool>' }
     steps:
-    - script: node --check portal/server.js
+    - script: node --check server.js
       displayName: portal syntax check (stdlib only — nothing to install)
     - script: bash -n run.sh prep.sh scripts/*.sh
       displayName: shell syntax check
@@ -37,9 +37,7 @@ stages:
               rsync -a --delete \
                 --exclude 'config/environments/' \
                 --exclude 'results/' \
-                --exclude 'portal/.locks/' \
-                --exclude 'portal/logs/' \
-                --exclude 'portal/runs.jsonl' \
+                --exclude '.portal/' \
                 "$(Pipeline.Workspace)/k6pt/" "$DEST/"
               systemctl --user restart k6pt-portal
             displayName: sync tree & restart portal

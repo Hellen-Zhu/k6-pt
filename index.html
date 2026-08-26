@@ -423,7 +423,7 @@ async function init() {
     if (CAT.profiles.some((x) => x.name === 'mix-ladder')) $('profile').value = 'mix-ladder';
     renderHealth(health); renderChips(); renderRounds(); renderPager(); renderPlot(); renderEnvState();
   } catch (e) {
-    $('banner').textContent = 'Console API unreachable (' + e.message + ') — start it on the injector: node portal/server.js';
+    $('banner').textContent = 'Console API unreachable (' + e.message + ') — start it on the injector: node server.js';
     $('banner').classList.add('show');
   }
 }

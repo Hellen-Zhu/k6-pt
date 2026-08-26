@@ -1,6 +1,4 @@
 data/**/_samples/
 results/
 .prep-plan.*
-portal/.locks/
-portal/logs/
-portal/runs.jsonl
+.portal/

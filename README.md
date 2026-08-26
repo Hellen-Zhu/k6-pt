@@ -1,6 +1,7 @@
-# k6-pt — k6 performance-testing framework
+# perf — k6 performance-testing framework
 
-Server-side load-testing framework for an FX structured-products trading API. Two top-level commands with strictly separate jobs — `./run.sh` triggers tests and reports, `./prep.sh` prepares pool data (demand math, seed producers, harvest, activation) — both run directly on Linux/macOS; Windows runs the same scripts via Git Bash.
+Server-side load-testing framework for the FX Structured Products Trading System. Two top-level commands with strictly separate jobs — `./run.sh` triggers tests and reports, `./prep.sh` prepares pool data (demand math, seed producers, harvest, activation) — both run directly on Linux/macOS; Windows runs the same scripts via Git Bash.
+Design doc: `../docs/superpowers/specs/2026-07-31-k6-perf-framework-design.md`.
 Architecture guide: `ARCHITECTURE.md` — directory map, the two pipelines, seed-vs-pool, name-wiring points.
 
 ## Quick start
@@ -35,7 +36,7 @@ No dependencies beyond k6 (no Node/jq/python); the summary is written to disk di
 
 ## Directory layout
 
-- `config/environments/` environments (single gateway endpoint `gatewayUrl` — every service sits behind it; allowlist, promRwUrl, grafanaDashboard, identity pools); **everything in the repo is localhost/example placeholders — real values are filled in only in the private copy; there is no prod entry and none is allowed**
+- `config/environments/` environments (single gateway endpoint `gatewayUrl` — every service sits behind it; allowlist, promRwUrl, grafanaDashboard, identity pools); **everything in the repo is localhost/example placeholders — real values are filled in only on the intranet; there is no prod entry and none is allowed**
 - `config/slas/` API-level percentile SLAs organized by module (attached to perf_success_duration; error rate and abort thresholds/breakers are profile-level)
 - `profiles/` load profiles (declarative JSON; the scenario block is verbatim k6 executor config; keys starting with `_` are comments; seven profiles — smoke/baseline/load/ladder/stress/spike/soak — methodology in each file's description)
 - `data/<module>/` per-API dedicated data: query field pools + create row files (one line = one complete same-origin row; discipline in `data/trade/README.md`); `data/datfiles/products/<productType>/` dat samples (placeholders, must be replaced with real captures)
@@ -59,4 +60,10 @@ No dependencies beyond k6 (no Node/jq/python); the summary is written to disk di
 
 ## Enabling real environments
 
-This repo has no mocks and no unit tests, so **the first real-environment smoke run is the framework's first end-to-end verification** — start with low traffic: smoke first, then short trial rounds, before any full-length round.
+This repo has no mocks and no unit tests, so **the first intranet smoke run is the framework's first end-to-end verification** — start with low traffic: smoke first, then short trial rounds, before any full-length round.
+
+## Web console
+
+`node server.js` → http://127.0.0.1:8090 — browse rounds/verdicts, launch runs
+(per-env lock, whitelisted overrides, audit). Node >= 18, standard library only.
+Design & contracts: PORTAL-DESIGN.md; deployment: deploy/ + azure-pipelines.yml.
