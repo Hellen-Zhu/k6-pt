@@ -126,11 +126,11 @@ done <<< "$PLANS"
 # Read-pool refresh: mixed entries also preflight trade-ids. The refresh is UNCONDITIONAL
 # (2026-08-13 decision): non-placeholder content proves nothing — ids from another
 # environment or a cleaned DB look valid here and only surface as http-404 mid-round.
-# Source (2026-09-01): the read-only collector (one blotter query over standing trades in
-# our portfolios — no writes, no rate-limit budget, immune to the create pipeline's
-# survival rate). An empty harvest (bare environment, or the hand-assembled portfolio
-# condition rejected — see the collector header) falls back to the old write-seed refresh,
-# which keeps prep self-sufficient on an empty DB. Skip only when this round's demand
+# Source (2026-09-01): the read-only collector (one GET /api/v1/trades list read scoped
+# by identity visibility + same-source productId filter — no writes, no rate-limit
+# budget, immune to the create pipeline's survival rate). An empty harvest (bare
+# environment, or list-contract drift — see the collector header) falls back to the old
+# write-seed refresh, which keeps prep self-sufficient on an empty DB. Skip only when this round's demand
 # already runs seed-update-pool, whose harvest refreshes trade-ids anyway (seed-harvest.sh
 # side effect).
 TRADE_IDS_FILE="data/trade/trade-ids.json"

@@ -4,12 +4,12 @@
 - `trades-create.json` — create case pool: one row = one complete runnable case. The row number `__row` is injected automatically at load time
   and serves as a metric tag (a bad data row can be sliced out directly from the metrics); there is no manually maintained id column.
 - `trade-ids.json` — trade ID pool: `{ ids: [...] }`, shared by the detail and risk-metrics scenarios.
-  Refresh is AUTOMATED: `./prep.sh harvest-trade-ids <env> ITERATIONS=1` runs one read-only blotter query scoped to our
-  portfolios (taken from the create rows — same-source discipline) and activates the harvest; mixed-round prep runs it for you
-  and falls back to a write-seed batch when the harvest comes back empty. Manual capture (blotter query via UI/curl) remains
-  the fallback when the collector's hand-assembled portfolio condition does not match the environment's blotter contract —
-  see the collector header (`src/seed/harvest-trade-ids.js`). IDs go stale with the environment; placeholders are intercepted
-  by the setup-phase preflight.
+  Refresh is AUTOMATED: `./prep.sh harvest-trade-ids <env> ITERATIONS=1` runs one read-only `GET /api/v1/trades` list read
+  (contract: `../api-captures/get-trades/`), scoped by identity visibility (harvests as maker — the same identity class the
+  read scenarios use) plus a same-source productId filter from the create rows, freshest-first; mixed-round prep runs it for
+  you and falls back to a write-seed batch when the harvest comes back empty. See the collector header
+  (`src/seed/harvest-trade-ids.js`). IDs go stale with the environment; placeholders are intercepted by the setup-phase
+  preflight.
   ⚠ Expired IDs show up as **http-404 falling into the technical class** — if you see a wall of http-404, re-run the
   collector first; do not treat it as a performance problem.
 - `amend-cycle-ids.json` — PERMANENT cycle pool for trade-mix-full's amend chain (update → reject; reject discards the

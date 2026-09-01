@@ -1,6 +1,7 @@
 # GET /api/v1/trades
 
 > ⚠ **已退役（2026-08-14）**：本接口由 `POST /api/v1/blotter/trades` 取代（见 [../post-blotter-trades/](../post-blotter-trades/)）。本记录保留作历史证据。
+> ↻ **重新启用（2026-09-01,仅限 prep）**：read-pool 采集器（`src/seed/harvest-trade-ids.js`,客户端 `src/api/trade/list.js`）以本契约为准做一次性只读采集——测量场景仍走 blotter,本接口不上测量路径（分页行为未知,见下文）。
 
 - **URL**: <GATEWAY_BASE>/api/v1/trades
 - **Method**: GET（本次抓包无 query 参数，全量列表）
