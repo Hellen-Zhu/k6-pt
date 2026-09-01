@@ -67,6 +67,26 @@ seed_run() { # <producer> <iterations>
   scripts/seed-harvest.sh "$dir" "$producer"
 }
 
+# ── trade-ids read-pool refresh (consumers: trades-detail / trades-risk-metrics; the
+# blotter query scenario carries its own payload rows and needs NO ids). UNCONDITIONAL
+# (2026-08-13 decision): non-placeholder content proves nothing — ids from another
+# environment or a cleaned DB look valid here and only surface as http-404 mid-round.
+# Source (2026-09-01): the read-only collector (one GET /api/v1/trades list read scoped by
+# identity visibility + same-source productId filter — no writes, no rate-limit budget,
+# immune to the create pipeline's survival rate). An empty harvest (bare environment, or
+# list-contract drift — see the collector header) falls back to the old write-seed
+# refresh, which keeps prep self-sufficient on an empty DB. ──
+refresh_trade_ids() {
+  echo "▶ prep     refreshing the trade-ids read pool — read-only harvest of standing trades"
+  seed_run harvest-trade-ids 1
+  if ! grep -q 'SEEDID ' "$LAST_SEED_DIR/k6.log"; then
+    echo "▶ prep     harvest came back empty — falling back to the write-seed refresh (seed-update-pool ITERATIONS=50)"
+    seed_run seed-update-pool 50
+  fi
+  grep -q 'TBC-' data/trade/trade-ids.json && { echo "ERROR: trade-ids still holds placeholders after refresh — harvest failed (environment reachable? contract drift?); prep aborted" >&2; exit 1; }
+  return 0
+}
+
 # ── Producer mode: ./prep.sh <seed-producer> [env] ITERATIONS=<n> ──
 if [[ -f "src/seed/${SCENARIO}.js" ]]; then
   ITER=""
@@ -92,6 +112,12 @@ producer_for() {
 }
 case "$SCENARIO" in
   trade-mix-book|trade-mix-amend|trade-mix-full|trades-update|checker-approve|trades-trigger-event) ;;
+  trades-detail|trades-risk-metrics)
+    # Read-pool-only scenarios: no POOLPLAN demand machinery (the pool is reusable —
+    # "prepared" means fresh, non-placeholder content, not a sized batch); refresh directly.
+    refresh_trade_ids
+    echo "✔ prep     trade-ids pool ready for $SCENARIO"
+    exit 0 ;;
   *) echo "prep: $SCENARIO consumes no seeded pools — nothing to do"; exit 0 ;;
 esac
 SCENARIO_FILE=""
@@ -123,26 +149,12 @@ while read -r pool planned; do
   printf '  %-16s planned %-7s floor %-7s seed ITERATIONS %s\n' "$pool" "$planned" "$needed" "$iter"
 done <<< "$PLANS"
 
-# Read-pool refresh: mixed entries also preflight trade-ids. The refresh is UNCONDITIONAL
-# (2026-08-13 decision): non-placeholder content proves nothing — ids from another
-# environment or a cleaned DB look valid here and only surface as http-404 mid-round.
-# Source (2026-09-01): the read-only collector (one GET /api/v1/trades list read scoped
-# by identity visibility + same-source productId filter — no writes, no rate-limit
-# budget, immune to the create pipeline's survival rate). An empty harvest (bare
-# environment, or list-contract drift — see the collector header) falls back to the old
-# write-seed refresh, which keeps prep self-sufficient on an empty DB. Skip only when this round's demand
-# already runs seed-update-pool, whose harvest refreshes trade-ids anyway (seed-harvest.sh
-# side effect).
-TRADE_IDS_FILE="data/trade/trade-ids.json"
+# Mixed entries also preflight trade-ids (their flows include detail reads) — refresh it
+# too (rationale at refresh_trade_ids). Skip only when this round's demand already runs
+# seed-update-pool, whose harvest refreshes trade-ids anyway (seed-harvest.sh side effect).
 case "$SCENARIO" in trade-mix-*)
   if ! grep -q '^update-ids ' <<< "$PLANS"; then
-    echo "▶ prep     refreshing the trade-ids read pool — read-only harvest of standing trades"
-    seed_run harvest-trade-ids 1
-    if ! grep -q 'SEEDID ' "$LAST_SEED_DIR/k6.log"; then
-      echo "▶ prep     harvest came back empty — falling back to the write-seed refresh (seed-update-pool ITERATIONS=50)"
-      seed_run seed-update-pool 50
-    fi
-    grep -q 'TBC-' "$TRADE_IDS_FILE" && { echo "ERROR: trade-ids still holds placeholders after refresh — harvest failed (environment reachable? contract drift?); prep aborted" >&2; exit 1; }
+    refresh_trade_ids
   fi ;;
 esac
 

@@ -4,7 +4,8 @@
 - `trades-create.json` — create case pool: one row = one complete runnable case. The row number `__row` is injected automatically at load time
   and serves as a metric tag (a bad data row can be sliced out directly from the metrics); there is no manually maintained id column.
 - `trade-ids.json` — trade ID pool: `{ ids: [...] }`, shared by the detail and risk-metrics scenarios.
-  Refresh is AUTOMATED: `./prep.sh harvest-trade-ids <env> ITERATIONS=1` runs one read-only `GET /api/v1/trades` list read
+  Refresh is AUTOMATED — `./prep.sh trades-detail <env>` (or `trades-risk-metrics`; the blotter query scenario is NOT a
+  consumer, it carries its own payload rows) runs one read-only `GET /api/v1/trades` list read
   (contract: `../api-captures/get-trades/`), scoped by identity visibility (harvests as maker — the same identity class the
   read scenarios use) plus a same-source productId filter from the create rows, freshest-first; mixed-round prep runs it for
   you and falls back to a write-seed batch when the harvest comes back empty. See the collector header

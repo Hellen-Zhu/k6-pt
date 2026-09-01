@@ -18,7 +18,10 @@
  * Rows are NOT status-filtered (detail reads any visible trade); if risk-metrics turns
  * out to choke on non-Live standing trades, add a basic.status === 'Live' filter here.
  *
- * Run:  ./prep.sh harvest-trade-ids <env> ITERATIONS=1
+ * Run:  ./prep.sh trades-detail <env>          (scenario mode — the natural entry: prep
+ *       the consumer; trades-risk-metrics works the same. The blotter query scenario is
+ *       NOT a consumer — it carries its own payload rows and needs no ids.)
+ *       ./prep.sh harvest-trade-ids <env> ITERATIONS=1   (producer mode, direct)
  *   ITERATIONS=1 is the norm — one request returns the full list. Dedupe + freshest-first
  *   (dealDate desc, client-side) cap happen here; scripts/seed-harvest.sh extracts the
  *   SEEDID lines and activates data/trade/trade-ids.json.
