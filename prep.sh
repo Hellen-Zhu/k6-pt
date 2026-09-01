@@ -53,10 +53,14 @@ seed_run() { # <producer> <iterations>
   local run_id="${producer}_${ENV_NAME}_seed_${stamp}"
   local dir="results/${stamp%%-*}/${run_id}"
   mkdir -p "$dir"
+  LAST_SEED_DIR="$dir"   # callers inspect the harvest (e.g. the read-pool refresh fallback)
   echo "▶ seed     $producer ITERATIONS=$iter → $dir"
   set +e
+  # User KEY=value overrides pass through (usage promises it: HARVEST_MAX etc.);
+  # the computed ITERATIONS comes last so it wins any user-supplied one.
   k6 run --tag "testid=$run_id" \
     -e ENV="$ENV_NAME" -e PROFILE=seed -e TESTID="$run_id" -e RESULT_DIR="$dir" \
+    ${OVERRIDE_ARGS[@]+"${OVERRIDE_ARGS[@]}"} \
     -e ITERATIONS="$iter" \
     "src/seed/${producer}.js" 2>&1 | tee "$dir/k6.log"
   set -e
@@ -122,13 +126,22 @@ done <<< "$PLANS"
 # Read-pool refresh: mixed entries also preflight trade-ids. The refresh is UNCONDITIONAL
 # (2026-08-13 decision): non-placeholder content proves nothing — ids from another
 # environment or a cleaned DB look valid here and only surface as http-404 mid-round.
-# Always seed a fresh batch; skip only when this round's demand already runs
-# seed-update-pool, whose harvest refreshes trade-ids anyway (seed-harvest.sh side effect).
+# Source (2026-09-01): the read-only collector (one blotter query over standing trades in
+# our portfolios — no writes, no rate-limit budget, immune to the create pipeline's
+# survival rate). An empty harvest (bare environment, or the hand-assembled portfolio
+# condition rejected — see the collector header) falls back to the old write-seed refresh,
+# which keeps prep self-sufficient on an empty DB. Skip only when this round's demand
+# already runs seed-update-pool, whose harvest refreshes trade-ids anyway (seed-harvest.sh
+# side effect).
 TRADE_IDS_FILE="data/trade/trade-ids.json"
 case "$SCENARIO" in trade-mix-*)
   if ! grep -q '^update-ids ' <<< "$PLANS"; then
-    echo "▶ prep     refreshing the trade-ids read pool — seeding a fresh batch via seed-update-pool ITERATIONS=50"
-    seed_run seed-update-pool 50
+    echo "▶ prep     refreshing the trade-ids read pool — read-only harvest of standing trades"
+    seed_run harvest-trade-ids 1
+    if ! grep -q 'SEEDID ' "$LAST_SEED_DIR/k6.log"; then
+      echo "▶ prep     harvest came back empty — falling back to the write-seed refresh (seed-update-pool ITERATIONS=50)"
+      seed_run seed-update-pool 50
+    fi
     grep -q 'TBC-' "$TRADE_IDS_FILE" && { echo "ERROR: trade-ids still holds placeholders after refresh — harvest failed (environment reachable? contract drift?); prep aborted" >&2; exit 1; }
   fi ;;
 esac

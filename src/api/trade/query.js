@@ -33,12 +33,12 @@ const REJECT_PATTERNS = [];
 
 /** blotterRow: one row from testdata (data/trade/trades-query.json) — a complete blotterDetails
  *  payload. Only the blotterDetails key reaches the wire; loader bookkeeping (__row) never does. */
-export function queryTrades(cfg, blotterRow, user) {
+export function queryTrades(cfg, blotterRow, user, runPhase) {
   const blotters = blotterRow.blotterDetails || [];
   const { res, tags } = client.postJson(cfg, '/api/v1/blotter/trades', { blotterDetails: blotters }, {
     name: 'POST /api/v1/blotter/trades', module: MOD, user,
     // row = data row number (__row): bounded tag, lets a bad blotter row be sliced out of metrics
-    tags: { row: String(blotterRow.__row || 0) },
+    tags: { row: String(blotterRow.__row || 0), runPhase: runPhase || 'main' },
   });
   const out = classifyResponse(res, tags, {
     business: (b) =>

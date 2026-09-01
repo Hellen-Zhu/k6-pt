@@ -23,6 +23,7 @@ case "$SCENARIO" in
   seed-approve-pool)     POOL_TARGET="data/trade/approve-tasks.json" ;;
   seed-event-pool)       POOL_TARGET="data/trade/event-ids.json" ;;
   seed-amend-cycle-pool) POOL_TARGET="data/trade/amend-cycle-ids.json" ;;
+  harvest-trade-ids)     POOL_TARGET="data/trade/trade-ids.json" ;;
   *)                     POOL_TARGET="" ;;
 esac
 {
@@ -44,8 +45,10 @@ elif [[ -n "$POOL_TARGET" && "${SEED_AUTO_ACTIVATE:-true}" != "false" ]]; then
   [[ -f "$RUN_DIR/replaced-pool.json" ]] && echo "  rollback:  cp $RUN_DIR/replaced-pool.json $POOL_TARGET   (previous pool, archived)"
   # Refresh the reusable read pool alongside: seed-update-pool's harvest is LIVE trades —
   # legitimate detail targets. Deliberately unconditional (team decision 2026-08-10): one seed
-  # session refreshes everything together. When the standing-data waterline matures, a
-  # GET-based collector over real standing trades becomes the formal source and this retires.
+  # session refreshes everything together. The GET-based collector the 2026-08-10 note
+  # anticipated now exists (harvest-trade-ids — the formal source since 2026-09-01); this
+  # side-effect refresh stays because its harvest is guaranteed-LIVE trades, and it is what
+  # prep.sh falls back to when the standing-data harvest comes back empty.
   TRADE_IDS_FILE="data/trade/trade-ids.json"
   if [[ "$SCENARIO" == "seed-update-pool" ]]; then
     [[ -f "$TRADE_IDS_FILE" ]] && cp "$TRADE_IDS_FILE" "$RUN_DIR/replaced-trade-ids.json"
